@@ -1,0 +1,11 @@
+res
+img
+*.ppm
+*.JPEG
+*.png
+*.jpg
+*~
+*.swp
+*.caffemodel
+*.mat
+*.solverstate
