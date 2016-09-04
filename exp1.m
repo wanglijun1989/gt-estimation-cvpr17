@@ -1,7 +1,9 @@
-clear;close all;clc;
+close all;clc;
 addpath('/home/lijun/Research/Code/caffe-blvc/matlab/')
 data_set = 'ECSSD';
 data_path = ['/home/lijun/Research/DataSet/Saliency/' data_set '/' data_set '-Image/'];
+% data_path = '/home/lijun/Research/DataSet/ILSVRC2014/ILSVRC2014_CLS_LOC/image/ILSVRC12_image_train/n04154565/';
+
 res_path = ['./res/' data_set '/'];
 if ~isdir(res_path)
     mkdir(res_path);
@@ -16,7 +18,7 @@ phase = 'test';
 net = caffe.Net(model_def, model_weights, phase);
 w = net.params('CAM_fc', 1).get_data();
 num_imgs = length(imgs);
-for i = 1:num_imgs
+for i = 153:num_imgs
     if mod(i, 100) == 0
         fprintf('Processing img: %04d / %04d\n', i, num_imgs);
     end
@@ -38,7 +40,15 @@ for i = 1:num_imgs
     prob_map = repmat(prob_map, 1, 1, 3);
     res_name = [imgs(i).name(1:end-3) 'ppm'];
     figure(1); subplot(1,2,1);imagesc(im);
-    subplot(1,2,2);imagesc(heat_map1)
+    subplot(1,2,2);imagesc(heat_map1);title(num2str(id));
+%     synsets(id)
+    figure(3); plot(out, '-o')
+    resized_im = imresize(im, [256,256]);
+    heat_map1 = imresize(mat2gray(heat_map1), [256,256]);
+%     figure(13);imshow((imresize(gen_map,[256,256])));%imagesc(gen_map);
+  figure(15);subplot(1,2,1);imagesc(heat_map1);
+  figure(15);subplot(1,2,2);imagesc(mat2gray(bsxfun(@times, double(resized_im), double(mat2gray(heat_map1)>0.1))));
+    
 %     imwrite(prob_map, sprintf('%s%s', res_path, res_name));
 end
 % imwrite(im, 'im.ppm');

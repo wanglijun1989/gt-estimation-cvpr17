@@ -4,9 +4,11 @@ img
 *.JPEG
 *.png
 *.jpg
+*.fig
 *~
 *.swp
 *.caffemodel
 *.mat
 *.solverstate
 *.txt
+external
