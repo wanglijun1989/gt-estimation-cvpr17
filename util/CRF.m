@@ -14,6 +14,7 @@ classdef CRF < handle
         edge_weight_;
         prob_;
         Z_;
+        boundary_
     end
     
     methods
@@ -29,11 +30,17 @@ classdef CRF < handle
             for i = 1 :length(obj.edge_)
                 assert(sum(abs(diag(obj.edge_{i}))) == 0, 'nodes are not self-connected.');
             end
-            if nargin == 4
+            if nargin >= 4
                 obj.edge_weight_ = varargin{4};
                 assert(length(obj.edge_) == length(obj.edge_weight_));
             else
                 obj.edge_weight_ = 0.3 * ones(length(obj.edge_), 1);
+            end
+            if nargin >= 5
+                obj.boundary_ = varargin{5};
+                obj.label_(obj.boundary_) = 0;
+            else
+                obj.boundary_ = [];
             end
             obj.Init();
         end
@@ -43,17 +50,19 @@ classdef CRF < handle
             obj.bgd_model_ = GMM(obj.feature_(:, obj.label_ <= 0));
             obj.prob_(1, :) = obj.bgd_model_.ComputeProb(obj.feature_);
             obj.prob_(2, :) = obj.fgd_model_.ComputeProb(obj.feature_);
+            obj.prob_(2, obj.boundary_) = 0;
             obj.unary_ = -log(obj.prob_);
             obj.Z_ = sum(obj.prob_, 1);
             obj.prob_ = bsxfun(@rdivide, obj.prob_, obj.Z_);
         end
         
         function UpdateUnary(obj)
+           
            obj.label_ = obj.prob_(2, :) > 0.5;
            obj.fgd_model_ = GMM(obj.feature_(:, obj.label_ > 0));
            obj.bgd_model_ = GMM(obj.feature_(:, obj.label_ <= 0));
-           obj.unary_(1, :) = -obj.bgd_model_.ComputeProb(obj.feature_);
-           obj.unary_(2, :) = -obj.fgd_model_.ComputeProb(obj.feature_);
+           obj.unary_(1, :) = obj.bgd_model_.ComputeProb(obj.feature_);
+           obj.unary_(2, :) = obj.fgd_model_.ComputeProb(obj.feature_);
            obj.unary_ = -log(obj.unary_);
         end
         
@@ -66,12 +75,13 @@ classdef CRF < handle
                 % connected, i.e., obj.edge_{i}(j,j) == 0
             end
             obj.prob_ = exp(- obj.unary_ - message_tmp);
+            obj.prob_(2, obj.boundary_) = 0;
             obj.Z_ = sum(obj.prob_, 1);
             obj.prob_ = bsxfun(@rdivide, obj.prob_, obj.Z_);
         end
         function NextIter(obj)
             obj.UpdateUnary();
-            for i =  1 : 5
+            for i =  1 : 10
                 obj.UpdateProb();
             end
         end

@@ -22,7 +22,7 @@ fore_thr = 0.6;
 fore_area_thr = 0.6;
 fea_theta = 1;
 position_theta = 0.001;
-smooth_theta = 0.001;
+smooth_theta = 0.01;
 %%------------------------set parameters---------------------%%
 theta=10; % control the edge weight 
 alpha=0.99;% control the balance of two items in manifold ranking cost function
@@ -49,7 +49,7 @@ saldir='./mr-saliencymap/';% the output path of the saliency map
 mkdir(saldir);
 imnames=dir([imgRoot '*' 'jpg']);
 
-for ii=55:length(imnames)
+for ii=111:length(imnames)
     disp(ii);
 %     imname=[imgRoot imnames(ii).name];
 %     [input_im,w]=removeframe(imname);% run a pre-processing to remove the image frame
@@ -74,8 +74,6 @@ for ii=55:length(imnames)
     assert(sp_num == length(unique(superpixels(:))))
     fea_sp = nan(3, sp_num);
     position = nan(2, sp_num);
-    fea_fore = [];
-    fea_back = [];
     init_label = zeros(1, sp_num);
     V = cat(3, V_rgb, V_lab);
     V = reshape(V, [], 3);
@@ -89,11 +87,6 @@ for ii=55:length(imnames)
         area = length(sp_loc);
         fore_area = sum(sum(gen_map(sp_loc)));
         init_label(i) = double(fore_area / area > fore_area_thr);
-        if init_label(i) > 0
-            fea_fore = [fea_fore, repmat(fea_sp(:, i), [1, ceil(area / 20)])];
-        else
-            fea_back = [fea_back, repmat(fea_sp(:, i), [1, 1])];
-        end
     end
     %% compute edge weights and construct CRF
     
@@ -104,7 +97,12 @@ for ii=55:length(imnames)
     affinity(1:size(affinity, 1)+1:end) = 0;
     edge_appearance(1:size(affinity, 1)+1:end) = 0;
     edge_smooth(1:size(affinity, 1)+1:end) = 0;
-    crf = CRF(fea_sp, init_label, {affinity, edge_appearance, edge_smooth}, [0.05, 0.3, 0.1]);
+    boundary = superpixels(1, :)';
+    boundary = [boundary; superpixels(end, :)'];
+    boundary = [boundary; superpixels(:, 1)];
+    boundary = [boundary; superpixels(:, end)];
+    boundary = unique(boundary);
+    crf = CRF(fea_sp, init_label, {affinity, edge_appearance, edge_smooth}, [0.1, 0.5, 0.1], boundary);
     %%
     for iteration = 1:5
         crf.NextIter();
@@ -114,14 +112,14 @@ for ii=55:length(imnames)
             sp_loc = find(superpixels == i);
             res(sp_loc) = fgd_prob(i);%>median(log_pro);
         end
-    
-    end
-        figure(1)
+    figure(1)
         subplot(2,2,1); imshow(im);
         subplot(2,2,2); imshow(gen_map);
-        subplot(2,2,3); imshow(mat2gray(abs(res)));
+        subplot(2,2,3); imshow(mat2gray(res));
         title(sprintf('Iteration %d/%d', iteration, 10));
         pause();
+    end
+        
     continue;
     %% 
     %% MR
