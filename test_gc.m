@@ -1,6 +1,8 @@
-
-clear all;
+close all;
+clear;
+clc;
 addpath(genpath('./external'))
+addpath('util/');
 addpath('/home/lijun/Research/Code/mexopencv/');
 devkit_path = '/home/lijun/Research/DataSet/ILSVRC2014/ILSVRC2014_devkit/ILSVRC2014_devkit/';
 addpath([devkit_path 'evaluation/'],'data_prepare/');
@@ -18,6 +20,9 @@ phase = 'test';
 net = caffe.Net(model_def, model_weights, phase);
 fore_thr = 0.6;
 fore_area_thr = 0.6;
+fea_theta = 1;
+position_theta = 0.001;
+smooth_theta = 0.001;
 %%------------------------set parameters---------------------%%
 theta=10; % control the edge weight 
 alpha=0.99;% control the balance of two items in manifold ranking cost function
@@ -34,7 +39,7 @@ opts.k = 512;       % controls scale of superpixels (big k -> big sp)
 opts.alpha = .5;    % relative importance of regularity versus data terms
 opts.beta = .9;     % relative importance of edge versus color terms
 opts.merge = 0.;%0;     % set to small value to merge nearby superpixels at end
-
+%%
 
 imgRoot='/home/lijun/Research/DataSet/Saliency/ECSSD/ECSSD-Image/';% test image path
 % imgRoot= './';
@@ -44,7 +49,7 @@ saldir='./mr-saliencymap/';% the output path of the saliency map
 mkdir(saldir);
 imnames=dir([imgRoot '*' 'jpg']);
 
-for ii=51:length(imnames)
+for ii=55:length(imnames)
     disp(ii);
 %     imname=[imgRoot imnames(ii).name];
 %     [input_im,w]=removeframe(imname);% run a pre-processing to remove the image frame
@@ -62,57 +67,61 @@ for ii=51:length(imnames)
     
     [E,~,~,segs]=edgesDetect(im,model);
     [superpixels, V_rgb, V_lab] = spDetect(im,E,opts);
-    superpixels = 1 + double(superpixels);
+    superpixels = 1 + superpixels;
+    [affinity,~,~]=spAffinities(superpixels,E,segs,opts.nThreads);
+    superpixels = double(superpixels);
     sp_num=max(superpixels(:));
     assert(sp_num == length(unique(superpixels(:))))
     fea_sp = nan(3, sp_num);
+    position = nan(2, sp_num);
     fea_fore = [];
     fea_back = [];
     init_label = zeros(1, sp_num);
-%     V = cat(3, V_rgb, V_lab);
-    V = reshape(V_rgb, [], 3);
+    V = cat(3, V_rgb, V_lab);
+    V = reshape(V, [], 3);
     %% label each superpixel
-%     for i = 1 : sp_num
-%         sp_loc = find(superpixels == i);
-%         fea_sp(:, i) = V(sp_loc(1), :);
-%         area = length(sp_loc);
-%         fore_area = sum(sum(gen_map(sp_loc)));
-%         init_label(i) = double(fore_area / area > fore_area_thr);
-%         if init_label(i) > 0
-%             fea_fore = [fea_fore, repmat(fea_sp(:, i), [1, ceil(area / 20)])];
-%         else
-%             fea_back = [fea_back, repmat(fea_sp(:, i), [1, 1])];
-%         end
-%     end
-V = reshape(mat2gray(im), [], 3);
-fea_fore = V(gen_map > 0, :)';
-fea_fore = fea_fore(:, 1:5:end);
-fea_back = V(gen_map <=0, :)';
-fea_back = fea_back(:, 1:5:end);
-fea_sp = V';
-    %% construct foreground GMM
-%     em = cv.EM('Nclusters', 3, 'CovMatTyep', 'Spherical');
-    em_fore = cv.EM('Nclusters', 5, 'MaxIters', 200);
-    em_back = cv.EM('Nclusters', 5, 'MaxIters', 200);
-    % em = cv.EM('Nclusters', 50, 'MaxIters', 200);
-    em_fore.train(fea_fore');
-    em_back.train(fea_back');
+    for i = 1 : sp_num
+        sp_loc = find(superpixels == i);
+        fea_sp(:, i) = V(sp_loc(1), :);
+        [r, c] = ind2sub([height, width], sp_loc);
+        position(1, i) = mean(r/height);
+        position(2, i) = mean(c/width);
+        area = length(sp_loc);
+        fore_area = sum(sum(gen_map(sp_loc)));
+        init_label(i) = double(fore_area / area > fore_area_thr);
+        if init_label(i) > 0
+            fea_fore = [fea_fore, repmat(fea_sp(:, i), [1, ceil(area / 20)])];
+        else
+            fea_back = [fea_back, repmat(fea_sp(:, i), [1, 1])];
+        end
+    end
+    %% compute edge weights and construct CRF
+    
+    edge_feature = ComputeSimilarity(fea_sp, fea_theta);
+    edge_position = ComputeSimilarity(position, position_theta);
+    edge_appearance = edge_feature .* edge_position;
+    edge_smooth = edge_position;
+    affinity(1:size(affinity, 1)+1:end) = 0;
+    edge_appearance(1:size(affinity, 1)+1:end) = 0;
+    edge_smooth(1:size(affinity, 1)+1:end) = 0;
+    crf = CRF(fea_sp, init_label, {affinity, edge_appearance, edge_smooth}, [0.05, 0.3, 0.1]);
     %%
-    [~, cluster_fore, pdf_fore] = em_fore.predict(fea_sp');
-    [~, cluster_back, pdf_back] = em_back.predict(fea_sp');
-%      fore_prob = sum(gaussian_pdf, 2);
-    prob_fore = pdf_fore * (em_fore.Weights)';
-    prob_back = pdf_back * (em_back.Weights)';
-    res = zeros(height, width);
-     res = reshape(prob_fore ./ (prob_fore + prob_back), [height, width]);
-%     for i = 1 : sp_num
-%         sp_loc = find(superpixels == i);
-%         res(sp_loc) = prob_fore(i)/(prob_fore(i) + prob_back(i));%>median(log_pro);
-%     end
-    figure(1)
-    subplot(2,2,1); imshow(im); 
-    subplot(2,2,2); imshow(gen_map); 
-    subplot(2,2,3); imshow(mat2gray(res)); 
+    for iteration = 1:5
+        crf.NextIter();
+        fgd_prob = crf.prob_(2, :);
+        res = zeros(height, width);
+        for i = 1 : sp_num
+            sp_loc = find(superpixels == i);
+            res(sp_loc) = fgd_prob(i);%>median(log_pro);
+        end
+    
+    end
+        figure(1)
+        subplot(2,2,1); imshow(im);
+        subplot(2,2,2); imshow(gen_map);
+        subplot(2,2,3); imshow(mat2gray(abs(res)));
+        title(sprintf('Iteration %d/%d', iteration, 10));
+        pause();
     continue;
     %% 
     %% MR

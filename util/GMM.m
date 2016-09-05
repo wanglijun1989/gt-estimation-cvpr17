@@ -4,7 +4,7 @@ classdef GMM < handle
     
     properties(SetAccess=protected)
         num_cluster_ = 5;
-        max_iter_ = 50;
+        max_iter_ = 5;
         label_;
         feature_;
         N_;
@@ -56,8 +56,8 @@ classdef GMM < handle
             for k = 1 : obj.num_cluster_
                 % E-Step
                 feature_zero_mean = bsxfun(@minus, obj.feature_, obj.mu_(:,k));
-                gaussian_pdf_tmp = -0.5 * feature_zero_mean' / obj.sig_{k};
-                obj.gaussian_pdf_(k, :) =  1 / ((2 * pi)^(obj.dim_/2) * det(obj.sig_{k})^0.5) * ...
+                gaussian_pdf_tmp = -0.5 * feature_zero_mean' / (obj.sig_{k} + 0.01 * eye(obj.dim_));
+                obj.gaussian_pdf_(k, :) =  1 / ((2 * pi)^(obj.dim_/2) * det((obj.sig_{k} + 0.01 * eye(obj.dim_)))^0.5) * ...
                     exp(sum(gaussian_pdf_tmp' .* feature_zero_mean, 1));
             end
         end
@@ -78,6 +78,13 @@ classdef GMM < handle
                     feature_zero_mean = bsxfun(@minus, obj.feature_, obj.mu_(:,k));
                     obj.sig_{k} =1 / N_k(k) * bsxfun(@times, feature_zero_mean, obj.gamma_(k, :)) * feature_zero_mean';
                 end
+        end
+        function prob = ComputeProb(obj, feature)
+            assert(obj.dim_ == size(feature, 1))
+            obj.feature_ = feature;
+            obj.N_ = size(feature, 2);
+            obj.ComputePDF();
+            prob =  obj.pi_' * obj.gaussian_pdf_;
         end
         
     end
