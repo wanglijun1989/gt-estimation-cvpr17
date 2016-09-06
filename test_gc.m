@@ -18,9 +18,9 @@ model_weights = [caffe_root 'models/cvpr17-ILT/ILT-3_iter_12000.caffemodel'];
 model_def = [caffe_root 'examples/cvpr17/deploy2.prototxt'];
 phase = 'test';
 net = caffe.Net(model_def, model_weights, phase);
-fore_thr = 0.5;
+fore_thr = 0.6;
 fore_area_thr = 0.5;
-fea_theta = 1e-2;
+fea_theta = 1e-3;
 position_theta = 1e-2;
 smooth_theta = 1e-2;
 %%------------------------set parameters---------------------%%
@@ -108,7 +108,7 @@ for ii=1:length(imnames)
     edge_appearance = bsxfun(@rdivide, edge_appearance, sum(edge_appearance, 1));
     edge_smooth = bsxfun(@rdivide, edge_smooth, sum(edge_smooth, 1));
     
-    crf = CRF([fea_sp; position], init_label, {affinity, edge_appearance, edge_smooth}, [0.1, 2, 1], boundary);
+    crf = CRF([fea_sp; position], init_label, {affinity, edge_appearance, edge_smooth}, [0.1, 4, 1], boundary);
     %% Show GMM labeling
 %     fgd_prob = crf.prob_(2, :);
 %     res = zeros(height, width);
