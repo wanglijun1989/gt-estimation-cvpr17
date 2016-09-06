@@ -21,8 +21,8 @@ net = caffe.Net(model_def, model_weights, phase);
 fore_thr = 0.6;
 fore_area_thr = 0.6;
 fea_theta = 1e-2;
-position_theta = 1e-2;
-smooth_theta = 1e-3;
+position_theta = 1e-3;
+smooth_theta = 1e-2;
 %%------------------------set parameters---------------------%%
 theta=10; % control the edge weight 
 alpha=0.99;% control the balance of two items in manifold ranking cost function
