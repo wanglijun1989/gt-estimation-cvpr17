@@ -18,10 +18,10 @@ model_weights = [caffe_root 'models/cvpr17-ILT/ILT-3_iter_12000.caffemodel'];
 model_def = [caffe_root 'examples/cvpr17/deploy2.prototxt'];
 phase = 'test';
 net = caffe.Net(model_def, model_weights, phase);
-fore_thr = 0.6;
-fore_area_thr = 0.6;
+fore_thr = 0.5;
+fore_area_thr = 0.5;
 fea_theta = 1e-2;
-position_theta = 1e-3;
+position_theta = 1e-2;
 smooth_theta = 1e-2;
 %%------------------------set parameters---------------------%%
 theta=10; % control the edge weight 
