@@ -21,7 +21,7 @@ net = caffe.Net(model_def, model_weights, phase);
 fore_thr = 0.6;
 fore_area_thr = 0.6;
 fea_theta = 1e-2;
-position_theta = 1e-3;
+position_theta = 1e-2;
 smooth_theta = 1e-3;
 %%------------------------set parameters---------------------%%
 theta=10; % control the edge weight 
@@ -105,7 +105,10 @@ for ii=1:length(imnames)
     boundary = [boundary; superpixels(:, 1)];
     boundary = [boundary; superpixels(:, end)];
     boundary = unique(boundary);
-    crf = CRF([fea_sp; position], init_label, {affinity, edge_appearance, edge_smooth}, [0.1, 0.5, 0.1], boundary);
+    edge_appearance = bsxfun(@rdivide, edge_appearance, sum(edge_appearance, 1));
+    edge_smooth = bsxfun(@rdivide, edge_smooth, sum(edge_smooth, 1));
+    
+    crf = CRF([fea_sp; position], init_label, {affinity, edge_appearance, edge_smooth}, [0.1, 2, 1], boundary);
     %% Show GMM labeling
 %     fgd_prob = crf.prob_(2, :);
 %     res = zeros(height, width);
