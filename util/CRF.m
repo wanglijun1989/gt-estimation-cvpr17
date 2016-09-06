@@ -55,6 +55,7 @@ classdef CRF < handle
             obj.unary_ = -log(obj.prob_+0.1);
             obj.Z_ = sum(obj.prob_, 1);
             obj.prob_ = bsxfun(@rdivide, obj.prob_, obj.Z_);
+            obj.UpdateProb();
         end
         
         function UpdateUnary(obj)
@@ -81,11 +82,11 @@ classdef CRF < handle
             obj.prob_ = bsxfun(@rdivide, obj.prob_, obj.Z_);
         end
         function NextIter(obj)
-            
+              obj.UpdateUnary();
             for i =  1 : 5
                 obj.UpdateProb();
             end
-            obj.UpdateUnary();
+          
         end
     end
     

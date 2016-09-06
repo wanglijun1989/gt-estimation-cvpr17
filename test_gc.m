@@ -20,9 +20,9 @@ phase = 'test';
 net = caffe.Net(model_def, model_weights, phase);
 fore_thr = 0.6;
 fore_area_thr = 0.6;
-fea_theta = 1e-3;
-position_theta = 1e-1;
-smooth_theta = 1e-4;
+fea_theta = 1e-2;
+position_theta = 1e-3;
+smooth_theta = 1e-3;
 %%------------------------set parameters---------------------%%
 theta=10; % control the edge weight 
 alpha=0.99;% control the balance of two items in manifold ranking cost function
@@ -35,21 +35,21 @@ model.opts.multiscale=0; model.opts.sharpen=2;
 %% set up opts for spDetect (see spDetect.m)
 opts = spDetect;
 opts.nThreads = 4;  % number of computation threads
-opts.k = 1024;       % controls scale of superpixels (big k -> big sp)
+opts.k = 512;       % controls scale of superpixels (big k -> big sp)
 opts.alpha = .5;    % relative importance of regularity versus data terms
 opts.beta = .9;     % relative importance of edge versus color terms
 opts.merge = 0.;%0;     % set to small value to merge nearby superpixels at end
 %%
 
-% imgRoot='/home/lijun/Research/DataSet/Saliency/ECSSD/ECSSD-Image/';% test image path
+imgRoot='/home/lijun/Research/DataSet/Saliency/ECSSD/ECSSD-Image/';% test image path
 % imgRoot= './';
-data_path = '/home/lijun/Research/DataSet/ILSVRC2014/ILSVRC2014_DET/';
-imgRoot = [data_path 'image/ILSVRC2013_DET_val/'];
-saldir='./mr-saliencymap/';% the output path of the saliency map
-mkdir(saldir);
-imnames=dir([imgRoot '*' 'JPEG']);
+% data_path = '/home/lijun/Research/DataSet/ILSVRC2014/ILSVRC2014_DET/';
+% imgRoot = [data_path 'image/ILSVRC2013_DET_val/'];
+res_path='./crf_gmm_res/';% the output path of the saliency map
+mkdir(res_path);
+imnames=dir([imgRoot '*' 'jpg']);
 
-for ii=101:length(imnames)
+for ii=1:length(imnames)
     disp(ii);
 %     imname=[imgRoot imnames(ii).name];
 %     [input_im,w]=removeframe(imname);% run a pre-processing to remove the image frame
@@ -105,37 +105,39 @@ for ii=101:length(imnames)
     boundary = [boundary; superpixels(:, 1)];
     boundary = [boundary; superpixels(:, end)];
     boundary = unique(boundary);
-    crf = CRF([fea_sp; position], init_label, {affinity, edge_appearance, edge_smooth}, [0., 5.3, 10], boundary);
+    crf = CRF([fea_sp; position], init_label, {affinity, edge_appearance, edge_smooth}, [0.1, 0.5, 0.1], boundary);
     %% Show GMM labeling
+%     fgd_prob = crf.prob_(2, :);
+%     res = zeros(height, width);
+%     for i = 1 : sp_num
+%         sp_loc = find(superpixels == i);
+%         res(sp_loc) = fgd_prob(i);%>median(log_pro);
+%     end
+%     figure(1)
+%     subplot(2,2,1); imshow(im);
+%     subplot(2,2,2); imshow(gen_map);
+%     subplot(2,2,3); imshow(mat2gray(res));
+%     title('GMM results');
+%     pause();
+    %% CRF iteration
+    for iteration = 1:5
+        crf.NextIter();
+    end
     fgd_prob = crf.prob_(2, :);
     res = zeros(height, width);
     for i = 1 : sp_num
         sp_loc = find(superpixels == i);
         res(sp_loc) = fgd_prob(i);%>median(log_pro);
     end
-    figure(1)
-    subplot(2,2,1); imshow(im);
-    subplot(2,2,2); imshow(gen_map);
-    subplot(2,2,3); imshow(mat2gray(res));
-    title('GMM results');
-    pause();
-    %% CRF iteration
-    for iteration = 1:5
-        crf.NextIter();
-        fgd_prob = crf.prob_(2, :);
-        res = zeros(height, width);
-        for i = 1 : sp_num
-            sp_loc = find(superpixels == i);
-            res(sp_loc) = fgd_prob(i);%>median(log_pro);
-        end
-        figure(1)
-        subplot(2,2,1); imshow(im);
-        subplot(2,2,2); imshow(gen_map);
-        subplot(2,2,3); imshow(mat2gray(res));
-        title(sprintf('Iteration %d/%d', iteration, 10));
-        pause();
-    end
-        
+    
+    res = (res - min(res(:))) / (max(res(:)) - min(res(:)));
+    imwrite(res, [res_path imnames(ii).name(1:end-3) 'png']);
+%     figure(1)
+%     subplot(2,2,1); imshow(im);
+%     subplot(2,2,2); imshow(gen_map);
+%     subplot(2,2,3); imshow(mat2gray(res));
+%     title(sprintf('Iteration %d/%d', iteration, 10));
+%     pause();
     continue;
     %% 
     %% MR
