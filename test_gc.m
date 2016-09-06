@@ -108,7 +108,7 @@ for ii=1:length(imnames)
     edge_appearance = bsxfun(@rdivide, edge_appearance, sum(edge_appearance, 1));
     edge_smooth = bsxfun(@rdivide, edge_smooth, sum(edge_smooth, 1));
     
-    crf = CRF([fea_sp; position], init_label, {affinity, edge_appearance, edge_smooth}, [0.1, 4, 1], boundary);
+    crf = CRF([fea_sp; position], init_label, {affinity, edge_appearance, edge_smooth}, [0.1, 3, 0.8], boundary);
     %% Show GMM labeling
 %     fgd_prob = crf.prob_(2, :);
 %     res = zeros(height, width);
