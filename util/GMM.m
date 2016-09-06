@@ -4,7 +4,7 @@ classdef GMM < handle
     
     properties(SetAccess=protected)
         num_cluster_ = 5;
-        max_iter_ = 5;
+        max_iter_ = 3;
         label_;
         feature_;
         N_;

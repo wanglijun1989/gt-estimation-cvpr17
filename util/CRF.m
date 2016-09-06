@@ -51,7 +51,8 @@ classdef CRF < handle
             obj.prob_(1, :) = obj.bgd_model_.ComputeProb(obj.feature_);
             obj.prob_(2, :) = obj.fgd_model_.ComputeProb(obj.feature_);
             obj.prob_(2, obj.boundary_) = 0;
-            obj.unary_ = -log(obj.prob_);
+            obj.prob_(2, obj.label_ <= 0) = 0;
+            obj.unary_ = -log(obj.prob_+0.1);
             obj.Z_ = sum(obj.prob_, 1);
             obj.prob_ = bsxfun(@rdivide, obj.prob_, obj.Z_);
         end
@@ -59,10 +60,10 @@ classdef CRF < handle
         function UpdateUnary(obj)
            
            obj.label_ = obj.prob_(2, :) > 0.5;
-           obj.fgd_model_ = GMM(obj.feature_(:, obj.label_ > 0));
-           obj.bgd_model_ = GMM(obj.feature_(:, obj.label_ <= 0));
-           obj.unary_(1, :) = obj.bgd_model_.ComputeProb(obj.feature_);
-           obj.unary_(2, :) = obj.fgd_model_.ComputeProb(obj.feature_);
+           obj.fgd_model_ = GMM(obj.feature_(1:6, obj.label_ > 0));
+           obj.bgd_model_ = GMM(obj.feature_(1:6, obj.label_ <= 0));
+           obj.unary_(1, :) = obj.bgd_model_.ComputeProb(obj.feature_(1:6,:));
+           obj.unary_(2, :) = obj.fgd_model_.ComputeProb(obj.feature_(1:6,:));
            obj.unary_ = -log(obj.unary_);
         end
         
@@ -80,10 +81,11 @@ classdef CRF < handle
             obj.prob_ = bsxfun(@rdivide, obj.prob_, obj.Z_);
         end
         function NextIter(obj)
-            obj.UpdateUnary();
-            for i =  1 : 10
+            
+            for i =  1 : 5
                 obj.UpdateProb();
             end
+            obj.UpdateUnary();
         end
     end
     
