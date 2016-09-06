@@ -49,7 +49,7 @@ res_path='./crf_gmm_res/';% the output path of the saliency map
 mkdir(res_path);
 imnames=dir([imgRoot '*' 'jpg']);
 
-for ii=1:length(imnames)
+for ii=360:length(imnames)
     disp(ii);
 %     imname=[imgRoot imnames(ii).name];
 %     [input_im,w]=removeframe(imname);% run a pre-processing to remove the image frame
@@ -123,7 +123,12 @@ for ii=1:length(imnames)
 %     title('GMM results');
 %     pause();
     %% CRF iteration
-    for iteration = 1:5
+    try
+        for iteration = 1:5
+            crf.NextIter();
+        end
+    catch
+        crf = CRF([fea_sp; position], init_label, {affinity, edge_appearance, edge_smooth}, [0.1, 3, 0.8], boundary);
         crf.NextIter();
     end
     fgd_prob = crf.prob_(2, :);
