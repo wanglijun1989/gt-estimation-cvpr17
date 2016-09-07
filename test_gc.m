@@ -41,15 +41,17 @@ opts.beta = .9;     % relative importance of edge versus color terms
 opts.merge = 0.;%0;     % set to small value to merge nearby superpixels at end
 %%
 
-imgRoot='/home/lijun/Research/DataSet/Saliency/ECSSD/ECSSD-Image/';% test image path
+% imgRoot='/home/lijun/Research/DataSet/Saliency/ECSSD/ECSSD-Image/';% test image path
+imgRoot='/home/lijun/Research/DataSet/Saliency/MSRA5000/MSRA5000-Image/';% test image path
 % imgRoot= './';
 % data_path = '/home/lijun/Research/DataSet/ILSVRC2014/ILSVRC2014_DET/';
 % imgRoot = [data_path 'image/ILSVRC2013_DET_val/'];
-res_path='./crf_gmm_res/';% the output path of the saliency map
+% res_path='./crf_gmm_res_2048/';% the output path of the saliency map
+res_path = 'crf_gmm_res/MSRA5000/512/';
 mkdir(res_path);
 imnames=dir([imgRoot '*' 'jpg']);
 
-for ii=360:length(imnames)
+for ii=1:length(imnames)
     disp(ii);
 %     imname=[imgRoot imnames(ii).name];
 %     [input_im,w]=removeframe(imname);% run a pre-processing to remove the image frame
@@ -124,7 +126,7 @@ for ii=360:length(imnames)
 %     pause();
     %% CRF iteration
     try
-        for iteration = 1:5
+        for iteration = 1:10
             crf.NextIter();
         end
     catch
