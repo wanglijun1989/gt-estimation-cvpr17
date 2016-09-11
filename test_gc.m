@@ -39,7 +39,7 @@ opts.beta = .9;     % relative importance of edge versus color terms
 opts.merge = 0.;%0;     % set to small value to merge nearby superpixels at end
 %% set up opts for CRF
 opt.fea_theta = 1e-2;
-opt.position_theta = 1e-2;
+opt.position_theta = 5e-3;
 opt.smooth_theta = 1e-4;
 %% set up opts for background cues
 opt.reg = 50;
@@ -53,7 +53,8 @@ imgRoot='/home/lijun/Research/DataSet/Saliency/PASCAL-S/PASCAL-S-Image/';% test 
 % imgRoot = [data_path 'image/ILSVRC2013_DET_val/'];
 % res_path='./crf_gmm_res_2048/';% the output path of the saliency map
 % res_path = 'crf_gmm_res/MSRA5000/512/';
-res_path = 'crf_gmm_res/PASCAL-S/512-back-prior/';
+res_path = 'crf_gmm_res/PASCAL-S/512-back-prior-2/';
+% res_path = 'crf_gmm_res/ECSSD/512-back-prior/';
 mkdir(res_path);
 imnames=dir([imgRoot '*' 'jpg']);
 
@@ -129,7 +130,7 @@ for ii=1:length(imnames)
 %     edge_smooth = bsxfun(@rdivide, edge_smooth, sum(edge_smooth, 1));
     %% Init CRF
     crf = CRF(255*[fea_sp; position], init_label, ...
-        {affinity, edge_appearance, edge_smooth}, [.1, 0.8, 0.5],... 
+        {affinity, edge_appearance, edge_smooth}, [.1, 2, 0.5],... 
          boundary, background_cue_sp, 0);
     %% Show GMM labeling
 %     fgd_prob = crf.prob_(2, :);
