@@ -20,9 +20,7 @@ phase = 'test';
 net = caffe.Net(model_def, model_weights, phase);
 fore_thr = 0.6;
 fore_area_thr = 0.5;
-fea_theta = 1e-3;
-position_theta = 1e-2;
-smooth_theta = 1e-2;
+
 %%------------------------set parameters---------------------%%
 theta=10; % control the edge weight 
 alpha=0.99;% control the balance of two items in manifold ranking cost function
@@ -39,15 +37,23 @@ opts.k = 512;       % controls scale of superpixels (big k -> big sp)
 opts.alpha = .5;    % relative importance of regularity versus data terms
 opts.beta = .9;     % relative importance of edge versus color terms
 opts.merge = 0.;%0;     % set to small value to merge nearby superpixels at end
-%%
-
+%% set up opts for CRF
+opt.fea_theta = 1e-2;
+opt.position_theta = 1e-2;
+opt.smooth_theta = 1e-4;
+%% set up opts for background cues
+opt.reg = 50;
+opt.margin_ratio = 0.1;
+opt.background_cue_weight = 2;
+imgRoot='/home/lijun/Research/DataSet/Saliency/PASCAL-S/PASCAL-S-Image/';% test image path
 % imgRoot='/home/lijun/Research/DataSet/Saliency/ECSSD/ECSSD-Image/';% test image path
-imgRoot='/home/lijun/Research/DataSet/Saliency/MSRA5000/MSRA5000-Image/';% test image path
+% imgRoot='/home/lijun/Research/DataSet/Saliency/MSRA5000/MSRA5000-Image/';% test image path
 % imgRoot= './';
 % data_path = '/home/lijun/Research/DataSet/ILSVRC2014/ILSVRC2014_DET/';
 % imgRoot = [data_path 'image/ILSVRC2013_DET_val/'];
 % res_path='./crf_gmm_res_2048/';% the output path of the saliency map
-res_path = 'crf_gmm_res/MSRA5000/512/';
+% res_path = 'crf_gmm_res/MSRA5000/512/';
+res_path = 'crf_gmm_res/PASCAL-S/512-back-prior/';
 mkdir(res_path);
 imnames=dir([imgRoot '*' 'jpg']);
 
@@ -69,7 +75,12 @@ for ii=1:length(imnames)
     gen_map = permute(gen_map, [2,1,3]);
     gen_map = imresize(gen_map, [height, width]);
     gen_map = double(gen_map > fore_thr);
-    
+    %% Compute Background cues
+    background_cue = BG(im, opt.reg, opt.margin_ratio);
+    background_cue = (background_cue - min(background_cue(:))) / (max(background_cue(:)) - min(background_cue(:)));
+%     figure(1);subplot(1,2,1);imshow(background_cue)
+%     continue
+    %% Oversegmentation
     [E,~,~,segs]=edgesDetect(im,model);
     [superpixels, V_rgb, V_lab] = spDetect(im,E,opts);
     superpixels = 1 + superpixels;
@@ -82,6 +93,8 @@ for ii=1:length(imnames)
     init_label = zeros(1, sp_num);
     V = cat(3, V_rgb, V_lab);
     V = reshape(V, [], 6);
+    tmp = zeros(height, width);
+    background_cue_sp = zeros(2, sp_num);
     %% label each superpixel
     for i = 1 : sp_num
         sp_loc = find(superpixels == i);
@@ -91,13 +104,18 @@ for ii=1:length(imnames)
         position(2, i) = mean(c/width);
         area = length(sp_loc);
         fore_area = sum(sum(gen_map(sp_loc)));
+        background_cue_sp(2, i) = max(background_cue(sp_loc));
+        background_cue_sp(1, i) = 1 - background_cue_sp(2, i);
         init_label(i) = double(fore_area / area > fore_area_thr);
+%         tmp(sp_loc) = background_cue_sp(i);
     end
+%     figure(1);subplot(1,2,2);imshow(mat2gray(tmp))
+%     continue
     %% compute edge weights and construct CRF
     
-    edge_feature = ComputeSimilarity(fea_sp, fea_theta);
-    edge_position = ComputeSimilarity(position, position_theta);
-    edge_smooth = ComputeSimilarity(position, smooth_theta);
+    edge_feature = ComputeSimilarity(fea_sp, opt.fea_theta);
+    edge_position = ComputeSimilarity(position, opt.position_theta);
+    edge_smooth = ComputeSimilarity(position, opt.smooth_theta);
     edge_appearance = edge_feature .* edge_position;
     affinity(1:size(affinity, 1)+1:end) = 0;
     edge_appearance(1:size(affinity, 1)+1:end) = 0;
@@ -107,10 +125,12 @@ for ii=1:length(imnames)
     boundary = [boundary; superpixels(:, 1)];
     boundary = [boundary; superpixels(:, end)];
     boundary = unique(boundary);
-    edge_appearance = bsxfun(@rdivide, edge_appearance, sum(edge_appearance, 1));
-    edge_smooth = bsxfun(@rdivide, edge_smooth, sum(edge_smooth, 1));
-    
-    crf = CRF([fea_sp; position], init_label, {affinity, edge_appearance, edge_smooth}, [0.1, 3, 0.8], boundary);
+%     edge_appearance = bsxfun(@rdivide, edge_appearance, sum(edge_appearance, 1));
+%     edge_smooth = bsxfun(@rdivide, edge_smooth, sum(edge_smooth, 1));
+    %% Init CRF
+    crf = CRF(255*[fea_sp; position], init_label, ...
+        {affinity, edge_appearance, edge_smooth}, [.1, 0.8, 0.5],... 
+         boundary, background_cue_sp, 0);
     %% Show GMM labeling
 %     fgd_prob = crf.prob_(2, :);
 %     res = zeros(height, width);
@@ -128,9 +148,22 @@ for ii=1:length(imnames)
     try
         for iteration = 1:10
             crf.NextIter();
+%             fgd_prob = crf.prob_(2, :);
+%             res = zeros(height, width);
+%             for i = 1 : sp_num
+%                 sp_loc = find(superpixels == i);
+%                 res(sp_loc) = fgd_prob(i);%>median(log_pro);
+%             end
+%             figure(1)
+%             subplot(2,2,1); imshow(im);
+%             subplot(2,2,2); imshow(gen_map);
+%             subplot(2,2,3); imshow(mat2gray(res));
+%             title(sprintf('Iteration %d/%d', iteration, 10));
+%             pause();
         end
     catch
-        crf = CRF([fea_sp; position], init_label, {affinity, edge_appearance, edge_smooth}, [0.1, 3, 0.8], boundary);
+%         assert(0)
+        crf = CRF([fea_sp; position], init_label, {affinity, edge_appearance, edge_smooth}, [0.01, 4, 2], boundary);
         crf.NextIter();
     end
     fgd_prob = crf.prob_(2, :);

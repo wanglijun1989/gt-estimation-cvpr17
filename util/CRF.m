@@ -14,7 +14,9 @@ classdef CRF < handle
         edge_weight_;
         prob_;
         Z_;
-        boundary_
+        boundary_;
+        prior_;
+        prior_weight_;
     end
     
     methods
@@ -42,6 +44,16 @@ classdef CRF < handle
             else
                 obj.boundary_ = [];
             end
+            if nargin >= 6
+                obj.prior_ = varargin{6};
+            else
+                obj.prior_= zeros(2, obj.N_);
+            end
+            if nargin >= 7
+                obj.prior_weight_ = varargin{7};
+            else
+                obj.prior_weight_ = 1;
+            end
             obj.Init();
         end
         
@@ -50,12 +62,16 @@ classdef CRF < handle
             obj.bgd_model_ = GMM(obj.feature_(:, obj.label_ <= 0));
             obj.prob_(1, :) = obj.bgd_model_.ComputeProb(obj.feature_);
             obj.prob_(2, :) = obj.fgd_model_.ComputeProb(obj.feature_);
+            obj.prob_ = bsxfun(@rdivide, obj.prob_, sum(obj.prob_, 1));
+            obj.prob_ = obj.prob_ + obj.prior_weight_ * obj.prior_;
             obj.prob_(2, obj.boundary_) = 0;
-            obj.prob_(2, obj.label_ <= 0) = 0;
-            obj.unary_ = -log(obj.prob_+0.1);
+%             obj.prob_(2, obj.label_ <= 0) = 0;
+            obj.unary_ = -log(obj.prob_+0.1 + obj.prior_weight_ * obj.prior_);
             obj.Z_ = sum(obj.prob_, 1);
             obj.prob_ = bsxfun(@rdivide, obj.prob_, obj.Z_);
+%             obj.UpdateUnary();
             obj.UpdateProb();
+             
         end
         
         function UpdateUnary(obj)
@@ -65,7 +81,8 @@ classdef CRF < handle
            obj.bgd_model_ = GMM(obj.feature_(1:6, obj.label_ <= 0));
            obj.unary_(1, :) = obj.bgd_model_.ComputeProb(obj.feature_(1:6,:));
            obj.unary_(2, :) = obj.fgd_model_.ComputeProb(obj.feature_(1:6,:));
-           obj.unary_ = -log(obj.unary_);
+           obj.unary_ = bsxfun(@rdivide, obj.unary_, sum(obj.unary_, 1));
+           obj.unary_ = -log(obj.unary_ +0.1 + obj.prior_weight_ * obj.prior_);
         end
         
         function UpdateProb(obj)
