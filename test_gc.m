@@ -1,5 +1,6 @@
 close all; clear; clc;
 init_test_gc;
+rng(0);
 %% Set data & resutls path
 % imgRoot='/home/lijun/Research/DataSet/Saliency/PASCAL-S/PASCAL-S-Image/';% test image path
 imgRoot='/home/lijun/Research/DataSet/Saliency/ECSSD/ECSSD-Image/';% test image path
@@ -9,7 +10,7 @@ imgRoot='/home/lijun/Research/DataSet/Saliency/ECSSD/ECSSD-Image/';% test image 
 % res_path='./crf_gmm_res_2048/';% the output path of the saliency map
 % res_path = 'crf_gmm_res/MSRA5000/512/';
 % res_path = 'crf_gmm_res/PASCAL-S/512-back-prior-2/';
-res_path = 'crf_gmm_res/ECSSD/512-back-prior-2/';
+res_path = 'crf_gmm_res/ECSSD/512-back-prior-3/';
 if ~isdir(res_path)
     mkdir(res_path);
 end
@@ -24,13 +25,8 @@ for ii=1:length(imnames)
         im = repmat(im, [1,1,3]);
     end
     %% forward pass
-    input = prepare_img(im, false);
-    out = net.forward({input});
-    out = out{1};
-    gen_map = net.blobs('gen_map_sigmoid').get_data();
-    gen_map = permute(gen_map, [2,1,3]);
-    gen_map = imresize(gen_map, [height, width]);
-    gen_map = double(gen_map > crf_opt.fore_thr);
+    gen_map = network_forward(net, im, crf_opt.fore_thr);
+
     %% Compute Background cues
     background_cue = BG(im, bgd_opt.reg, bgd_opt.margin_ratio);
     background_cue = (background_cue - min(background_cue(:))) / (max(background_cue(:)) - min(background_cue(:)));
@@ -52,7 +48,6 @@ for ii=1:length(imnames)
     V = reshape(V, [], 6);
     tmp = zeros(height, width);
     background_cue_sp = zeros(2, sp_num);
-    %% label each superpixel
     for i = 1 : sp_num
         sp_loc = find(superpixels == i);
         fea_sp(:, i) = V(sp_loc(1), :);
@@ -83,64 +78,22 @@ for ii=1:length(imnames)
     %     edge_smooth = bsxfun(@rdivide, edge_smooth, sum(edge_smooth, 1));
     %% Init CRF
     crf = CRF(255*[fea_sp; position], init_label, ...
-        {affinity, edge_appearance, edge_smooth}, [.1, 2, 0.5],...
+        {affinity, edge_appearance, edge_smooth}, [.1, 1, 0.5],...
         boundary, background_cue_sp, 0);
     %% Show GMM labeling
-    if visualize
-        fgd_prob = crf.prob_(2, :);
-        res = zeros(height, width);
-        for i = 1 : sp_num
-            sp_loc = find(superpixels == i);
-            res(sp_loc) = fgd_prob(i);%>median(log_pro);
-        end
-        figure(1)
-        subplot(2,2,1); imshow(im);
-        subplot(2,2,2); imshow(gen_map);
-        subplot(2,2,3); imshow(mat2gray(res));
-        title('GMM results');
-        pause();
-    end
+        visualization(im, gen_map, superpixels, crf, visualize, false);
     %% CRF iteration
     try
         for iteration = 1:10
             crf.NextIter();
-            if visualize
-                fgd_prob = crf.prob_(2, :);
-                res = zeros(height, width);
-                for i = 1 : sp_num
-                    sp_loc = find(superpixels == i);
-                    res(sp_loc) = fgd_prob(i);%>median(log_pro);
-                end
-                figure(1)
-                subplot(2,2,1); imshow(im);
-                subplot(2,2,2); imshow(gen_map);
-                subplot(2,2,3); imshow(mat2gray(res));
-                title(sprintf('Iteration %d/%d', iteration, 10));
-                pause();
-            end
+            visualization(im, gen_map, superpixels, crf, visualize, false);
         end
     catch
         %         assert(0)
-        crf = CRF(255*[fea_sp; position], init_label, {affinity, edge_appearance, edge_smooth}, [0.01, 4, 2], boundary);
+        crf = CRF(255*[fea_sp; position], init_label, {affinity, edge_appearance, edge_smooth}, [.1, 2, 0.5], boundary);
         crf.NextIter();
     end
-    fgd_prob = crf.prob_(2, :);
-    res = zeros(height, width);
-    for i = 1 : sp_num
-        sp_loc = find(superpixels == i);
-        res(sp_loc) = fgd_prob(i);%>median(log_pro);
-    end
-    
-    res = (res - min(res(:))) / (max(res(:)) - min(res(:)));
+    %% visualization and save results
+    res = visualization(im, gen_map, superpixels, crf, visualize, true);
     imwrite(res, [res_path imnames(ii).name(1:end-3) 'png']);
-    if visualize
-        figure(1)
-        subplot(2,2,1); imshow(im);
-        subplot(2,2,2); imshow(gen_map);
-        subplot(2,2,3); imshow(mat2gray(res));
-        title(sprintf('Iteration %d/%d', iteration, 10));
-        pause();
-        
-    end
-    continue;
 end

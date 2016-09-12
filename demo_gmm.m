@@ -1,10 +1,10 @@
 close all; clear; clc;
-feature(:, 1:100) = randn(3,100);
-feature(:, 101:200) = randn(3,100) + 1;
-feature(:, 201:300) = randn(3,100) + 3;
-feature(:, 301:400) = randn(3,100) + 5;
+feature(:, 1:1000) = randn(3,1000);
+feature(:, 1001:2000) = randn(3,1000) + 1;
+feature(:, 2001:3000) = 2*randn(3,1000) + 3;
+feature(:, 3001:4000) = 3*randn(3,1000) + 5;
 
-gmm = GMM(feature, 4, 1);
+gmm = GMM(200* feature, 4, 1);
 
 color = rand(gmm.num_cluster_, 3);
 ecolor = rand(gmm.num_cluster_,3);
