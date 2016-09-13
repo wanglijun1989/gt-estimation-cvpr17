@@ -2,15 +2,15 @@ close all; clear; clc;
 init_test_gc;
 rng(0);
 %% Set data & resutls path
-imgRoot='/home/lijun/Research/DataSet/Saliency/PASCAL-S/PASCAL-S-Image/';% test image path
-% imgRoot='/home/lijun/Research/DataSet/Saliency/ECSSD/ECSSD-Image/';% test image path
+% imgRoot='/home/lijun/Research/DataSet/Saliency/PASCAL-S/PASCAL-S-Image/';% test image path
+imgRoot='/home/lijun/Research/DataSet/Saliency/ECSSD/ECSSD-Image/';% test image path
 % imgRoot='/home/lijun/Research/DataSet/Saliency/MSRA5000/MSRA5000-Image/';% test image path
 % imgRoot = [data_path 'image/ILSVRC2013_DET_val/'];
 
 % res_path='./crf_gmm_res_2048/';% the output path of the saliency map
 % res_path = 'crf_gmm_res/MSRA5000/512/';
-res_path = 'crf_gmm_res/PASCAL-S/512-back-prior-3/';
-% res_path = 'crf_gmm_res/ECSSD/512-back-prior-3/';
+% res_path = 'crf_gmm_res/PASCAL-S/512-back-prior-3/';
+res_path = 'crf_gmm_res/ECSSD/512-back-prior-3/';
 if ~isdir(res_path)
     mkdir(res_path);
 end
@@ -90,7 +90,7 @@ for ii=1:length(imnames)
         end
     catch
         %         assert(0)
-        crf = CRF(255*[fea_sp; position], init_label, {affinity, edge_appearance, edge_smooth}, [.8, 2.5, 0.5], boundary);
+        crf = CRF(255*[fea_sp; position], init_label, {affinity, edge_appearance, edge_smooth}, [.5, 2, 1], boundary);
         crf.NextIter();
     end
     %% visualization and save results
