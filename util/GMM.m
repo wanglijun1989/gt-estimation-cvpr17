@@ -3,7 +3,7 @@ classdef GMM < handle
     %   Detailed explanation goes here
     
     properties(SetAccess=protected)
-        num_cluster_ = 5;
+        num_cluster_ = 10;
         max_iter_ = 2;
         label_;
         feature_;
