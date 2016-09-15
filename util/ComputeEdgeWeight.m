@@ -5,10 +5,10 @@ edge_appearance = cell(num_scale, num_scale);
 edge_smooth = cell(num_scale, num_scale);
 for scale_y = 1:num_scale
     %% Compute edge weights within each scale
-    edge_feature = ComputeSimilarity(sp_info.fea{scale_y}, opt.fea_theta);
-    edge_position = ComputeSimilarity(sp_info.position{scale_y}, opt.position_theta);
+    edge_feature = ComputeSimilarity(sp_info.fea{scale_y}, opt.fea_theta(scale_y));
+    edge_position = ComputeSimilarity(sp_info.position{scale_y}, opt.position_theta(scale_y));
     edge_appearance{scale_y, scale_y} = edge_feature .* edge_position;
-    edge_smooth{scale_y, scale_y} = ComputeSimilarity(sp_info.position{scale_y}, opt.smooth_theta);
+    edge_smooth{scale_y, scale_y} = ComputeSimilarity(sp_info.position{scale_y}, opt.smooth_theta(scale_y));
     scale_x = scale_y+1;
     if scale_x > num_scale
         continue

@@ -2,15 +2,15 @@ close all; clear; clc;
 init_test_gc;
 rng(0);
 %% Set data & resutls path
-% imgRoot='/home/lijun/Research/DataSet/Saliency/PASCAL-S/PASCAL-S-Image/';% test image path
-imgRoot='/home/lijun/Research/DataSet/Saliency/ECSSD/ECSSD-Image/';% test image path
+imgRoot='/home/lijun/Research/DataSet/Saliency/PASCAL-S/PASCAL-S-Image/';% test image path
+% imgRoot='/home/lijun/Research/DataSet/Saliency/ECSSD/ECSSD-Image/';% test image path
 % imgRoot='/home/lijun/Research/DataSet/Saliency/MSRA5000/MSRA5000-Image/';% test image path
 % imgRoot = [data_path 'image/ILSVRC2013_DET_val/'];
 
 % res_path='./crf_gmm_res_2048/';% the output path of the saliency map
 % res_path = 'crf_gmm_res/MSRA5000/512/';
-% res_path = 'crf_gmm_res/PASCAL-S/512-back-prior-3/';
-res_path = 'crf_gmm_res/ECSSD/512-back-prior-3/';
+res_path = 'crf_gmm_res/PASCAL-S/512-multi-scale-1/';
+% res_path = 'crf_gmm_res/ECSSD/512-back-prior-3/';
 if ~isdir(res_path)
     mkdir(res_path);
 end
@@ -35,44 +35,13 @@ for ii=1:length(imnames)
 
     %% Oversegemntation
     [superpixels, sp_num, affinity, feature] = OverSegment(im, model, opts);
-%     superpixels = superpixels{1}; affinity = affinity{1}; V = feature{1};
     %% Compute superpixel init label and features (r,g,b,l,a,b,x,y)
     sp_info = ComputeSPixelFeature(superpixels, sp_num, gen_map, feature, background_cue, [height, width], crf_opt.fore_area_thr);
     [edge_appearance, edge_smooth, edge_affinity] = ComputeEdgeWeight(sp_info, affinity, crf_opt);
-    
-    
-%     fea_sp = nan(6, sp_num);
-%     position = nan(2, sp_num);
-%     init_label = zeros(1, sp_num);
-% %     V = cat(3, V_rgb, V_lab);
-% %     V = reshape(V, [], 6);
-%     tmp = zeros(height, width);
-%     background_cue_sp = zeros(2, sp_num);
-%     for i = 1 : sp_num
-%         sp_loc = find(superpixels == i);
-%         fea_sp(:, i) = V(sp_loc(1), :);
-%         [r, c] = ind2sub([height, width], sp_loc);
-%         position(1, i) = mean(r/height);
-%         position(2, i) = mean(c/width);
-%         area = length(sp_loc);
-%         fore_area = sum(sum(gen_map(sp_loc)));
-%         background_cue_sp(2, i) = max(background_cue(sp_loc));
-%         background_cue_sp(1, i) = 1 - background_cue_sp(2, i);
-%         init_label(i) = double(fore_area / area > crf_opt.fore_area_thr);
-%     end
-    %% compute edge weights and construct CRF
-    
-%     edge_feature = ComputeSimilarity(fea_sp, crf_opt.fea_theta);
-%     edge_position = ComputeSimilarity(position, crf_opt.position_theta);
-%     edge_smooth = ComputeSimilarity(position, crf_opt.smooth_theta);
-%     edge_appearance = edge_feature .* edge_position;
-    
     edge_appearance(1:size(edge_affinity, 1)+1:end) = 0;
     edge_smooth(1:size(edge_affinity, 1)+1:end) = 0;
     edge_affinity(1:size(edge_affinity, 1)+1:end) = 0;
     boundary = DetectBoundarySP(superpixels{1});
-    %     edge_appearance = bsxfun(@rdivide, edge_appearance, sum(edge_appearance, 1));
-    %     edge_smooth = bsxfun(@rdivide, edge_smooth, sum(edge_smooth, 1));
     %% Init CRF
     sp_feature = cell2mat(sp_info.fea');
     sp_position = cell2mat(sp_info.position');
