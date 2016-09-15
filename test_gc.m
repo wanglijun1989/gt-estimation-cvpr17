@@ -9,8 +9,10 @@ imgRoot='/home/lijun/Research/DataSet/Saliency/PASCAL-S/PASCAL-S-Image/';% test 
 
 % res_path='./crf_gmm_res_2048/';% the output path of the saliency map
 % res_path = 'crf_gmm_res/MSRA5000/512/';
-res_path = 'crf_gmm_res/PASCAL-S/512-multi-scale-1/';
+% res_path = 'crf_gmm_res/PASCAL-S/512-multi-scale-1/';
+res_path = 'crf_gmm_res/PASCAL-S/multi-scale-2/';
 % res_path = 'crf_gmm_res/ECSSD/512-back-prior-3/';
+% res_path = 'crf_gmm_res/ECSSD/multi-scale-2/';
 if ~isdir(res_path)
     mkdir(res_path);
 end
@@ -41,7 +43,7 @@ for ii=1:length(imnames)
     edge_appearance(1:size(edge_affinity, 1)+1:end) = 0;
     edge_smooth(1:size(edge_affinity, 1)+1:end) = 0;
     edge_affinity(1:size(edge_affinity, 1)+1:end) = 0;
-    boundary = DetectBoundarySP(superpixels{1});
+    boundary = DetectBoundarySP(superpixels, sp_num);
     %% Init CRF
     sp_feature = cell2mat(sp_info.fea');
     sp_position = cell2mat(sp_info.position');
