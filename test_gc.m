@@ -17,6 +17,7 @@ res_path = 'crf_gmm_res/PASCAL-S/multi-scale-test-3/';
 % res_path = 'crf_gmm_res/ECSSD/512-back-prior-3/';
 % res_path = 'crf_gmm_res/ECSSD/multi-scale-2/';
 % res_path = 'crf_gmm_res/ECSSD/multi-scale-3/';
+% res_path = 'crf_gmm_res/ECSSD/multi-scale-test-3/';
 if ~isdir(res_path)
     mkdir(res_path);
 end
