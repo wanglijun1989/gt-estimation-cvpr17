@@ -24,12 +24,12 @@ opts.alpha = .5;    % relative importance of regularity versus data terms
 opts.beta = .9;     % relative importance of edge versus color terms
 opts.merge = 0.;%0;     % set to small value to merge nearby superpixels at end
 opts.num_scale = 3;
-opts.scale_weight = [0.7, 0.2, 0.1];
+opts.scale_weight = [0.7, 0.15, 0.15];
 assert(opts.num_scale == length(opts.k) && opts.num_scale == length(opts.scale_weight));
 %% set up opts for CRF
 crf_opt.fore_thr = 0.6;
 crf_opt.fore_area_thr = 0.5;
-crf_opt.fea_theta = [1e-2, 1e-1, 5e-1];
+crf_opt.fea_theta = [1e-2, 5e-2, 5e-1];
 crf_opt.position_theta = [5e-3, 5e-3, 5e-3];
 crf_opt.smooth_theta = [1e-4, 5e-4, 1e-3];
 assert(opts.num_scale == length(crf_opt.fea_theta) && opts.num_scale == length(crf_opt.position_theta)...
