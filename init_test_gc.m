@@ -19,19 +19,19 @@ model.opts.multiscale=0; model.opts.sharpen=2;
 %% set up opts for spDetect (see spDetect.m)
 opts = spDetect;
 opts.nThreads = 4;  % number of computation threads
-opts.k = {512, 1024};       % controls scale of superpixels (big k -> big sp)
+opts.k = {512, 1024, 2048};       % controls scale of superpixels (big k -> big sp)
 opts.alpha = .5;    % relative importance of regularity versus data terms
 opts.beta = .9;     % relative importance of edge versus color terms
 opts.merge = 0.;%0;     % set to small value to merge nearby superpixels at end
-opts.num_scale = 2;
-opts.scale_weight = [0.8, 0.2];
+opts.num_scale = 3;
+opts.scale_weight = [0.7, 0.2, 0.1];
 assert(opts.num_scale == length(opts.k) && opts.num_scale == length(opts.scale_weight));
 %% set up opts for CRF
 crf_opt.fore_thr = 0.6;
 crf_opt.fore_area_thr = 0.5;
-crf_opt.fea_theta = [1e-2, 1e-2];
-crf_opt.position_theta = [5e-3, 5e-3];
-crf_opt.smooth_theta = [1e-4, 1e-4];
+crf_opt.fea_theta = [1e-2, 1e-2, 1e-2];
+crf_opt.position_theta = [5e-3, 5e-3, 5e-3];
+crf_opt.smooth_theta = [1e-4, 1e-4, 1e-4];
 assert(opts.num_scale == length(crf_opt.fea_theta) && opts.num_scale == length(crf_opt.position_theta)...
     &&opts.num_scale == length(crf_opt.smooth_theta))
 

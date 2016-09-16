@@ -17,51 +17,73 @@ classdef CRF < handle
         boundary_;
         prior_;
         prior_weight_;
+        sp_num_;
+        group_num_
     end
     
     methods
-        function obj = CRF(varargin)
-            assert(nargin >= 3, 'Usage: a = CRF(feature, label, edge, [edge_weights])'); 
-            assert(iscell(varargin{3}));
-            obj.feature_ = varargin{1};
-            obj.label_ = varargin{2};
+        function obj = CRF(feature, label, edge, varargin)
+            p = inputParser;
+            p.addRequired('feature',@ismatrix);
+            p.addRequired('label', @ismatrix);
+            p.addRequired('edge', @iscell);
+            p.addOptional('edge_weight', [], @ismatrix);
+            p.addParameter('boundary',[], @ismatrix);
+            p.addParameter('prior',[], @ismatrix);
+            p.addParameter('prior_weight',0, @isnumeric);
+            p.addParameter('sp_num',[], @ismatrix);
+            
+            p.parse(feature, label, edge, varargin{:});
+            %% feaqture, label and edge
+            obj.feature_ = p.Results.feature;
+            obj.label_ = p.Results.label;
+            obj.edge_ = p.Results.edge;
             [obj.dim_, obj.N_] = size(obj.feature_);
+            % validation  
             assert(obj.N_ == length(obj.label_));
             assert(max(obj.label_(:)) <= 1 && min(obj.label_(:) >=0), 'This is a binary CRF.');
-            obj.edge_ = varargin{3};
             for i = 1 :length(obj.edge_)
                 assert(sum(abs(diag(obj.edge_{i}))) == 0, 'nodes are not self-connected.');
             end
-            if nargin >= 4
-                obj.edge_weight_ = varargin{4};
-                assert(length(obj.edge_) == length(obj.edge_weight_));
-            else
+            %% edge_weight
+            obj.edge_weight_ = p.Results.edge_weight;
+            if isempty(obj.edge_weight_)
                 obj.edge_weight_ = 0.3 * ones(length(obj.edge_), 1);
             end
-            if nargin >= 5
-                obj.boundary_ = varargin{5};
-                obj.label_(obj.boundary_) = 0;
-            else
-                obj.boundary_ = [];
-            end
-            if nargin >= 6
-                obj.prior_ = varargin{6};
-            else
+            assert(length(obj.edge_) == length(obj.edge_weight_));
+            %% boundary
+            obj.boundary_ = p.Results.boundary;
+            obj.label_(obj.boundary_) = 0;
+            %% piror
+            obj.prior_ = p.Results.prior;
+            if isempty(obj.prior_)
                 obj.prior_= zeros(2, obj.N_);
             end
-            if nargin >= 7
-                obj.prior_weight_ = varargin{7};
-            else
-                obj.prior_weight_ = 1;
+            %% prior weights
+            obj.prior_weight_ = p.Results.prior_weight;
+            %% sp_num
+            obj.sp_num_ = p.Results.sp_num;
+            if isempty(obj.sp_num_)
+                obj.sp_num_ = obj.N_;
             end
+            obj.group_num_ = length(obj.sp_num_);
             obj.Init();
         end
         
         function Init(obj)
-            obj.fgd_model_ = GMM(obj.feature_(:, obj.label_ > 0));
-            obj.bgd_model_ = GMM(obj.feature_(:, obj.label_ <= 0));
-            obj.prob_(1, :) = obj.bgd_model_.ComputeProb(obj.feature_);
-            obj.prob_(2, :) = obj.fgd_model_.ComputeProb(obj.feature_);
+            obj.fgd_model_ = cell(obj.group_num_, 1);
+            obj.bgd_model_ = cell(obj.group_num_, 1);
+            end_id = 0;
+            for i = 1:obj.group_num_
+                start_id = end_id+1;
+                end_id = end_id + obj.sp_num_(i);
+                cur_feature = obj.feature_(:, start_id:end_id);
+                cur_label = obj.label_(:, start_id:end_id);
+                obj.fgd_model_{i} = GMM(cur_feature(:, cur_label> 0));
+                obj.bgd_model_{i} = GMM(cur_feature(:, cur_label<= 0));
+                obj.prob_(1, start_id:end_id) = obj.bgd_model_{i}.ComputeProb(cur_feature);
+                obj.prob_(2, start_id:end_id) = obj.fgd_model_{i}.ComputeProb(cur_feature);
+            end
             obj.prob_ = bsxfun(@rdivide, obj.prob_, sum(obj.prob_, 1));
             obj.prob_ = obj.prob_ + obj.prior_weight_ * obj.prior_;
             obj.prob_(2, obj.boundary_) = 0;
@@ -71,16 +93,23 @@ classdef CRF < handle
             obj.prob_ = bsxfun(@rdivide, obj.prob_, obj.Z_);
 %             obj.UpdateUnary();
             obj.UpdateProb();
-             
         end
         
         function UpdateUnary(obj)
            
            obj.label_ = obj.prob_(2, :) > 0.5;
-           obj.fgd_model_ = GMM(obj.feature_(1:6, obj.label_ > 0));
-           obj.bgd_model_ = GMM(obj.feature_(1:6, obj.label_ <= 0));
-           obj.unary_(1, :) = obj.bgd_model_.ComputeProb(obj.feature_(1:6,:));
-           obj.unary_(2, :) = obj.fgd_model_.ComputeProb(obj.feature_(1:6,:));
+           
+           end_id = 0;
+           for i = 1:obj.group_num_
+               start_id = end_id+1;
+               end_id = end_id + obj.sp_num_(i);
+               cur_feature = obj.feature_(1:6, start_id:end_id);
+               cur_label = obj.label_(:, start_id:end_id);
+               obj.fgd_model_{i} = GMM(cur_feature(:, cur_label> 0));
+               obj.bgd_model_{i} = GMM(cur_feature(:, cur_label<= 0));
+               obj.unary_(1, start_id:end_id) = obj.bgd_model_{i}.ComputeProb(cur_feature);
+               obj.unary_(2, start_id:end_id) = obj.fgd_model_{i}.ComputeProb(cur_feature);
+           end
            obj.unary_ = bsxfun(@rdivide, obj.unary_, sum(obj.unary_, 1));
            obj.unary_ = -log(obj.unary_ +0.1 + obj.prior_weight_ * obj.prior_);
         end
@@ -103,7 +132,6 @@ classdef CRF < handle
             for i =  1 : 5
                 obj.UpdateProb();
             end
-          
         end
     end
     

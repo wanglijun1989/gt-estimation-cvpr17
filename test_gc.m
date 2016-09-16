@@ -2,15 +2,16 @@ close all; clear; clc;
 init_test_gc;
 rng(0);
 %% Set data & resutls path
-imgRoot='/home/lijun/Research/DataSet/Saliency/PASCAL-S/PASCAL-S-Image/';% test image path
-% imgRoot='/home/lijun/Research/DataSet/Saliency/ECSSD/ECSSD-Image/';% test image path
+% imgRoot='/home/lijun/Research/DataSet/Saliency/PASCAL-S/PASCAL-S-Image/';% test image path
+imgRoot='/home/lijun/Research/DataSet/Saliency/ECSSD/ECSSD-Image/';% test image path
 % imgRoot='/home/lijun/Research/DataSet/Saliency/MSRA5000/MSRA5000-Image/';% test image path
 % imgRoot = [data_path 'image/ILSVRC2013_DET_val/'];
 
 % res_path='./crf_gmm_res_2048/';% the output path of the saliency map
 % res_path = 'crf_gmm_res/MSRA5000/512/';
 % res_path = 'crf_gmm_res/PASCAL-S/512-multi-scale-1/';
-res_path = 'crf_gmm_res/PASCAL-S/multi-scale-2/';
+% res_path = 'crf_gmm_res/PASCAL-S/multi-scale-2/';
+res_path = 'crf_gmm_res/PASCAL-S/multi-scale-3/';
 % res_path = 'crf_gmm_res/ECSSD/512-back-prior-3/';
 % res_path = 'crf_gmm_res/ECSSD/multi-scale-2/';
 if ~isdir(res_path)
@@ -52,7 +53,7 @@ for ii=1:length(imnames)
     background_cue_sp = cell2mat(sp_info.background_cue');
     crf = CRF(255*[sp_feature; sp_position],sp_init_label, ...
         {edge_affinity, edge_appearance, edge_smooth}, [.1, 1, 0.5],...
-        boundary, background_cue_sp, 0);
+        'boundary', boundary,'prior', background_cue_sp, 'prior_weight', 0, 'sp_num', sp_num);
     %% Show GMM labeling
         visualization(im, gen_map, superpixels, crf, opts.scale_weight, sp_num, visualize);
     %% CRF iteration
@@ -63,9 +64,9 @@ for ii=1:length(imnames)
         end
     catch
         %         assert(0)
-        crf = CRF(255*[sp_feature; sp_position],sp_init_label, ...
-            {edge_affinity, edge_appearance, edge_smooth}, [.1, 1, 0.5],...
-            boundary, background_cue_sp, 0);
+         crf = CRF(255*[sp_feature; sp_position],sp_init_label, ...
+        {edge_affinity, edge_appearance, edge_smooth}, [.1, 1, 0.5],...
+        'boundary', boundary,'prior', background_cue_sp, 'prior_weight', 0, 'sp_num', sp_num);
         crf.NextIter();
     end
     %% visualization and save results
