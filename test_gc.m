@@ -2,8 +2,8 @@ close all; clear; clc;
 init_test_gc;
 rng(0);
 %% Set data & resutls path
-imgRoot='/home/lijun/Research/DataSet/Saliency/PASCAL-S/PASCAL-S-Image/';% test image path
-% imgRoot='/home/lijun/Research/DataSet/Saliency/ECSSD/ECSSD-Image/';% test image path
+% imgRoot='/home/lijun/Research/DataSet/Saliency/PASCAL-S/PASCAL-S-Image/';% test image path
+imgRoot='/home/lijun/Research/DataSet/Saliency/ECSSD/ECSSD-Image/';% test image path
 % imgRoot='/home/lijun/Research/DataSet/Saliency/MSRA5000/MSRA5000-Image/';% test image path
 % imgRoot = [data_path 'image/ILSVRC2013_DET_val/'];
 
@@ -14,17 +14,18 @@ imgRoot='/home/lijun/Research/DataSet/Saliency/PASCAL-S/PASCAL-S-Image/';% test 
 % res_path = 'crf_gmm_res/PASCAL-S/multi-scale-test/';
 % res_path = 'crf_gmm_res/PASCAL-S/multi-scale-test-2/';
 % res_path = 'crf_gmm_res/PASCAL-S/multi-scale-test-3/';
-res_path = 'crf_gmm_res/PASCAL-S/multi-scale-test-7/';
+% res_path = 'crf_gmm_res/PASCAL-S/multi-scale-test-8/';
 % res_path = 'crf_gmm_res/ECSSD/512-back-prior-3/';
 % res_path = 'crf_gmm_res/ECSSD/multi-scale-2/';
 % res_path = 'crf_gmm_res/ECSSD/multi-scale-3/';
 % res_path = 'crf_gmm_res/ECSSD/multi-scale-test-3/';
+res_path = 'crf_gmm_res/ECSSD/multi-scale-test-8/';
 if ~isdir(res_path)
     mkdir(res_path);
 end
 imnames=dir([imgRoot '*' 'jpg']);
 %% Main loop
-for ii=2:length(imnames)
+for ii=170:length(imnames)
     fprintf('Processing Img:%d/%d\n', ii, length(imnames));
     %% read image
     im = imread(sprintf('%s%s', imgRoot, imnames(ii).name));
@@ -43,7 +44,6 @@ for ii=2:length(imnames)
 
     %% Oversegemntation
     [superpixels, sp_num, affinity, feature] = OverSegment(im, model, opts);
-    continue
     %% Compute superpixel init label and features (r,g,b,l,a,b,x,y)
     sp_info = ComputeSPixelFeature(superpixels, sp_num, gen_map, feature, background_cue, [height, width], crf_opt.fore_area_thr);
     [edge_appearance, edge_smooth, edge_affinity] = ComputeEdgeWeight(sp_info, affinity, crf_opt);
