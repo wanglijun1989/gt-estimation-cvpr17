@@ -29,13 +29,13 @@ assert(opts.num_scale == length(opts.k) && opts.num_scale == length(opts.scale_w
 %% set up opts for CRF
 crf_opt.fore_thr = 0.6;
 crf_opt.fore_area_thr = 0.5;
-crf_opt.fea_theta = [1e-2, 1e-2, 1e-1];
-crf_opt.position_theta = [5e-3, 5e-3, 5e-3];
+crf_opt.fea_theta = [1e-2, 1e-2, 5e-2];
+crf_opt.position_theta = [5e-3, 5e-3, 1e-2];
 crf_opt.smooth_theta = [1e-4, 1e-4, 5e-4];
 assert(opts.num_scale == length(crf_opt.fea_theta) && opts.num_scale == length(crf_opt.position_theta)...
     &&opts.num_scale == length(crf_opt.smooth_theta))
 
-crf_opt.fea_theta2 = 1e-3;
+crf_opt.fea_theta2 = 1e-4;
 crf_opt.position_theta2 = 1e-4;
 crf_opt.smooth_theta2 = 1e-4;
 %% set up opts for background cues

@@ -14,7 +14,7 @@ imgRoot='/home/lijun/Research/DataSet/Saliency/PASCAL-S/PASCAL-S-Image/';% test 
 % res_path = 'crf_gmm_res/PASCAL-S/multi-scale-test/';
 % res_path = 'crf_gmm_res/PASCAL-S/multi-scale-test-2/';
 % res_path = 'crf_gmm_res/PASCAL-S/multi-scale-test-3/';
-res_path = 'crf_gmm_res/PASCAL-S/multi-scale-test-5/';
+res_path = 'crf_gmm_res/PASCAL-S/multi-scale-test-6/';
 % res_path = 'crf_gmm_res/ECSSD/512-back-prior-3/';
 % res_path = 'crf_gmm_res/ECSSD/multi-scale-2/';
 % res_path = 'crf_gmm_res/ECSSD/multi-scale-3/';
@@ -24,7 +24,7 @@ if ~isdir(res_path)
 end
 imnames=dir([imgRoot '*' 'jpg']);
 %% Main loop
-for ii=1:length(imnames)
+for ii=155:length(imnames)
     fprintf('Processing Img:%d/%d\n', ii, length(imnames));
     %% read image
     im = imread(sprintf('%s%s', imgRoot, imnames(ii).name));
