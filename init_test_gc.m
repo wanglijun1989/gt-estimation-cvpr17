@@ -1,4 +1,4 @@
-x%% Add path and init caffe
+%% Add path and init caffe
 caffe_root = '/home/lijun/Research/Code/caffe-blvc/';
 addpath([caffe_root '/matlab/'],genpath('./external'), 'util/');
 caffe.reset_all;

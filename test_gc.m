@@ -3,7 +3,8 @@ init_test_gc;
 rng(0);
 %% Set data & resutls path
 % imgRoot='/home/lijun/Research/DataSet/Saliency/PASCAL-S/PASCAL-S-Image/';% test image path
-imgRoot='/home/lijun/Research/DataSet/Saliency/ECSSD/ECSSD-Image/';% test image path
+% imgRoot='/home/lijun/Research/DataSet/Saliency/ECSSD/ECSSD-Image/';% test image path
+imgRoot='/home/lijun/Research/DataSet/Saliency/THUS/THUS-Image/';% test image path
 % imgRoot='/home/lijun/Research/DataSet/Saliency/MSRA5000/MSRA5000-Image/';% test image path
 % imgRoot = [data_path 'image/ILSVRC2013_DET_val/'];
 
@@ -19,13 +20,14 @@ imgRoot='/home/lijun/Research/DataSet/Saliency/ECSSD/ECSSD-Image/';% test image 
 % res_path = 'crf_gmm_res/ECSSD/multi-scale-2/';
 % res_path = 'crf_gmm_res/ECSSD/multi-scale-3/';
 % res_path = 'crf_gmm_res/ECSSD/multi-scale-test-3/';
-res_path = 'crf_gmm_res/ECSSD/multi-scale-test-8/';
+% res_path = 'crf_gmm_res/ECSSD/multi-scale-test-8/';
+res_path = 'crf_gmm_res/THUS/multi-scale-test-8/';
 if ~isdir(res_path)
     mkdir(res_path);
 end
 imnames=dir([imgRoot '*' 'jpg']);
 %% Main loop
-for ii=170:length(imnames)
+for ii=1:length(imnames)
     fprintf('Processing Img:%d/%d\n', ii, length(imnames));
     %% read image
     im = imread(sprintf('%s%s', imgRoot, imnames(ii).name));
