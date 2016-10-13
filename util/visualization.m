@@ -20,7 +20,7 @@ if visualize
     mul_scale_res = (mul_scale_res - min(mul_scale_res(:))) / (max(mul_scale_res(:)) - min(mul_scale_res(:)));
     figure(1)
     subplot(2,2,1); imshow(im);
-    subplot(2,2,2); imshow(gen_map);
+    subplot(2,2,2); imagesc(gen_map);
     subplot(2,2,3); imshow(mat2gray(mul_scale_res));
     title('GMM results');
     pause

@@ -6,11 +6,26 @@ gpu_id = 0;
 caffe.set_mode_gpu();
 caffe.set_device(gpu_id);
 
-model_weights = [caffe_root 'models/cvpr17-ILT/ILT-3_iter_6000.caffemodel'];
-model_def = [caffe_root 'examples/cvpr17/deploy2.prototxt'];
+%% specify machine id and model version
+machine_id = 'server11';
+model_version = num2str(2);
+iter_num = '5000';
+postfix = '65';
+data_set = 'PASCAL-S';
+specify_machine;
+%% init network
+model_weights = [caffe_root 'models/' machine_path '/ip-' model_version '_iter_' iter_num '.caffemodel'];
+model_def = [caffe_root 'models/' machine_path '/deploy-' model_version '.prototxt'];
 phase = 'test';
 net = caffe.Net(model_def, model_weights, phase);
+%% input output path
 
+imgRoot=['/home/lijun/Research/DataSet/Saliency/' data_set '/' data_set '-Image/'];
+res_path = ['crf_gmm_res/' data_set '/' machine_id '_v' model_version '/' iter_num '-' postfix '/'];
+if ~isdir(res_path)
+    mkdir(res_path);
+end
+imnames=dir([imgRoot '*' 'jpg']);
 %% Init SE model
 model=load('models/forest/modelBsds'); 
 model=model.model;
@@ -27,7 +42,7 @@ opts.num_scale = 1;
 opts.scale_weight = [1];
 assert(opts.num_scale == length(opts.k) && opts.num_scale == length(opts.scale_weight));
 %% set up opts for CRF
-crf_opt.fore_thr = 0.6;
+crf_opt.fore_thr = 0.65;
 crf_opt.fore_area_thr = 0.5;
 crf_opt.fea_theta = [1e-2];
 crf_opt.position_theta = [5e-3];

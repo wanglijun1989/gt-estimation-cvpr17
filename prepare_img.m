@@ -14,5 +14,5 @@ else
     out = bsxfun(@minus, im_data, reshape([103.939, 116.779, 123.68],[1,1,3]));
 end
 
-    out = imresize(out, [224 224], 'bilinear');  % resize im_data
+    out = imresize(out, [256 256], 'bilinear');  % resize im_data
 end

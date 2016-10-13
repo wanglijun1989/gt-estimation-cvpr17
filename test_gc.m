@@ -1,31 +1,8 @@
-close all; clear; clc;
+% close all; clear; clc;
 init_test_gc;
 rng(0);
-%% Set data & resutls path
-% imgRoot='/home/lijun/Research/DataSet/Saliency/PASCAL-S/PASCAL-S-Image/';% test image path
-% imgRoot='/home/lijun/Research/DataSet/Saliency/ECSSD/ECSSD-Image/';% test image path
-imgRoot='/home/lijun/Research/DataSet/Saliency/THUS/THUS-Image/';% test image path
-% imgRoot='/home/lijun/Research/DataSet/Saliency/MSRA5000/MSRA5000-Image/';% test image path
-% imgRoot = [data_path 'image/ILSVRC2013_DET_val/'];
 
-% res_path='./crf_gmm_res_2048/';% the output path of the saliency map
-% res_path = 'crf_gmm_res/MSRA5000/512/';
-% res_path = 'crf_gmm_res/PASCAL-S/512-multi-scale-1/';
-% res_path = 'crf_gmm_res/PASCAL-S/multi-scale-2/';
-% res_path = 'crf_gmm_res/PASCAL-S/multi-scale-test/';
-% res_path = 'crf_gmm_res/PASCAL-S/multi-scale-test-2/';
-% res_path = 'crf_gmm_res/PASCAL-S/multi-scale-test-3/';
-% res_path = 'crf_gmm_res/PASCAL-S/multi-scale-test-8/';
-% res_path = 'crf_gmm_res/ECSSD/512-back-prior-3/';
-% res_path = 'crf_gmm_res/ECSSD/multi-scale-2/';
-% res_path = 'crf_gmm_res/ECSSD/multi-scale-3/';
-% res_path = 'crf_gmm_res/ECSSD/multi-scale-test-3/';
-% res_path = 'crf_gmm_res/ECSSD/multi-scale-test-8/';
-res_path = 'crf_gmm_res/THUS/multi-scale-test-8/';
-if ~isdir(res_path)
-    mkdir(res_path);
-end
-imnames=dir([imgRoot '*' 'jpg']);
+
 %% Main loop
 for ii=1:length(imnames)
     fprintf('Processing Img:%d/%d\n', ii, length(imnames));
@@ -75,10 +52,12 @@ for ii=1:length(imnames)
          crf = CRF(255*[sp_feature; sp_position],sp_init_label, ...
         {edge_affinity, edge_appearance, edge_smooth}, [.1, 1, 0.5],...
         'boundary', boundary,'prior', background_cue_sp, 'prior_weight', 0, 'sp_num', sp_num);
-        crf.NextIter();
+%         crf.NextIter();
     end
     %% visualization and save results
     visualization(im, gen_map, superpixels, crf, opts.scale_weight, sp_num, visualize);
     res = GenerateMap(im, superpixels, crf, opts.scale_weight, sp_num);
     imwrite(res, [res_path imnames(ii).name(1:end-3) 'png']);
 end
+disp([machine_id '-v' model_version '-' iter_num '-' postfix])
+disp(res_path);
