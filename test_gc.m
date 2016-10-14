@@ -5,7 +5,7 @@ rng(0);
 
 %% Main loop
 for ii=1:length(imnames)
-    fprintf('Processing Img:%d/%d\n', ii, length(imnames));
+%     fprintf('Processing Img:%d/%d\n', ii, length(imnames));
     %% read image
     im = imread(sprintf('%s%s', imgRoot, imnames(ii).name));
     [height, width, ch] = size(im);
@@ -36,12 +36,19 @@ for ii=1:length(imnames)
     sp_init_label = cell2mat(sp_info.init_label');
     
     background_cue_sp = cell2mat(sp_info.background_cue');
+    
+    if sum(sp_init_label) <= 10
+        res = gen_map;
+        imwrite(res, [res_path imnames(ii).name(1:end-3) 'png']);
+        continue;
+    end
     crf = CRF(255*[sp_feature; sp_position],sp_init_label, ...
         {edge_affinity, edge_appearance, edge_smooth}, [.1, 1, 0.5],...
         'boundary', boundary,'prior', background_cue_sp, 'prior_weight', 0, 'sp_num', sp_num);
     %% Show GMM labeling
         visualization(im, gen_map, superpixels, crf, opts.scale_weight, sp_num, visualize);
     %% CRF iteration
+
     try
         for iteration = 1:10
             crf.NextIter();
@@ -59,5 +66,7 @@ for ii=1:length(imnames)
     res = GenerateMap(im, superpixels, crf, opts.scale_weight, sp_num);
     imwrite(res, [res_path imnames(ii).name(1:end-3) 'png']);
 end
-disp([machine_id '-v' model_version '-' iter_num '-' postfix])
-disp(res_path);
+% disp([machine_id '-v' model_version '-' iter_num '-' postfix])
+% disp(res_path);
+fprintf('{''%s'', ''/home/lijun/Research/Code/CVPR17/%s'', [], '''' ''png''};\n',[machine_id '-v' major_model_version minor_model_version '-' iter_num '-' postfix], ...
+    res_path);

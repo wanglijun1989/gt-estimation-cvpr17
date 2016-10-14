@@ -2,26 +2,27 @@
 caffe_root = '/home/lijun/Research/Code/caffe-blvc/';
 addpath([caffe_root '/matlab/'],genpath('./external'), 'util/');
 caffe.reset_all;
-gpu_id = 0;
+gpu_id = 1;
 caffe.set_mode_gpu();
 caffe.set_device(gpu_id);
 
 %% specify machine id and model version
-machine_id = 'server11';
-model_version = num2str(2);
-iter_num = '5000';
-postfix = '65';
+machine_id = 'local';
+major_model_version = num2str(1);
+minor_model_version = '';
+% iter_num = '22000';
+% postfix = '65';
 data_set = 'PASCAL-S';
 specify_machine;
 %% init network
-model_weights = [caffe_root 'models/' machine_path '/ip-' model_version '_iter_' iter_num '.caffemodel'];
-model_def = [caffe_root 'models/' machine_path '/deploy-' model_version '.prototxt'];
+model_weights = [caffe_root 'models/' machine_path '/ip-' major_model_version minor_model_version '_iter_' iter_num '.caffemodel'];
+model_def = [caffe_root 'models/' machine_path '/deploy-' major_model_version '.prototxt'];
 phase = 'test';
 net = caffe.Net(model_def, model_weights, phase);
 %% input output path
 
 imgRoot=['/home/lijun/Research/DataSet/Saliency/' data_set '/' data_set '-Image/'];
-res_path = ['crf_gmm_res/' data_set '/' machine_id '_v' model_version '/' iter_num '-' postfix '/'];
+res_path = ['crf_gmm_res/' data_set '/' machine_id '_v' major_model_version minor_model_version '/' iter_num '-' postfix '/'];
 if ~isdir(res_path)
     mkdir(res_path);
 end
@@ -42,7 +43,7 @@ opts.num_scale = 1;
 opts.scale_weight = [1];
 assert(opts.num_scale == length(opts.k) && opts.num_scale == length(opts.scale_weight));
 %% set up opts for CRF
-crf_opt.fore_thr = 0.65;
+% crf_opt.fore_thr = 0.65;
 crf_opt.fore_area_thr = 0.5;
 crf_opt.fea_theta = [1e-2];
 crf_opt.position_theta = [5e-3];
