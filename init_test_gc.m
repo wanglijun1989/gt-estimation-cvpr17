@@ -10,8 +10,8 @@ caffe.set_device(gpu_id);
 machine_id = 'local';
 major_model_version = num2str(1);
 minor_model_version = '';
-% iter_num = '22000';
-% postfix = '65';
+iter_num = '5000';
+postfix = 'test';
 data_set = 'PASCAL-S';
 specify_machine;
 %% init network
@@ -43,7 +43,7 @@ opts.num_scale = 1;
 opts.scale_weight = [1];
 assert(opts.num_scale == length(opts.k) && opts.num_scale == length(opts.scale_weight));
 %% set up opts for CRF
-% crf_opt.fore_thr = 0.65;
+crf_opt.fore_thr = 0.65;
 crf_opt.fore_area_thr = 0.5;
 crf_opt.fea_theta = [1e-2];
 crf_opt.position_theta = [5e-3];
@@ -58,4 +58,4 @@ crf_opt.smooth_theta2 = 1e-4;
 bgd_opt.reg = 50;
 bgd_opt.margin_ratio = 0.1;
 bgd_opt.background_cue_weight = 2;%%
-visualize = false;
+visualize = 0;
