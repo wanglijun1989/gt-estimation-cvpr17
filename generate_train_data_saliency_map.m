@@ -1,0 +1,130 @@
+clear
+clc
+rng(0);
+imagenet_root = '/home/lijun/Research/DataSet/ILSVRC2014/ILSVRC2014_DET/';
+image_path = [imagenet_root 'image/ILSVRC2014_DET_train/'];
+map_path = [imagenet_root 'sal_map/ILSVRC2014_DET_train/'];
+if ~isdir(map_path)
+    mkdir(map_path)
+end
+sub_dir = dir(image_path);
+%% Add path and init caffe
+caffe_root = '/home/lijun/Research/Code/caffe-blvc/';
+addpath([caffe_root '/matlab/'],genpath('./external'), 'util/');
+caffe.reset_all;
+gpu_id = 1;
+caffe.set_mode_gpu();
+caffe.set_device(gpu_id);
+%% specify machine id and model version
+machine_id = 'local';
+major_model_version = num2str(1);
+minor_model_version = '';
+specify_machine;
+iter_num = '5000';
+%% init network
+model_weights = [caffe_root 'models/' machine_path '/ip-' major_model_version minor_model_version '_iter_' iter_num '.caffemodel'];
+model_def = [caffe_root 'models/' machine_path '/deploy-' major_model_version '.prototxt'];
+phase = 'test';
+net = caffe.Net(model_def, model_weights, phase);
+%% 
+%% Init SE model
+model=load('models/forest/modelBsds'); 
+model=model.model;
+model.opts.nms=-1; model.opts.nThreads=4;
+model.opts.multiscale=0; model.opts.sharpen=2;
+%% set up opts for spDetect (see spDetect.m)
+opts = spDetect;
+opts.nThreads = 4;  % number of computation threads
+opts.k = {512};       % controls scale of superpixels (big k -> big sp)
+opts.alpha = .5;    % relative importance of regularity versus data terms
+opts.beta = .9;     % relative importance of edge versus color terms
+opts.merge = 0.;%0;     % set to small value to merge nearby superpixels at end
+opts.num_scale = 1;
+opts.scale_weight = [1];
+assert(opts.num_scale == length(opts.k) && opts.num_scale == length(opts.scale_weight));
+%% set up opts for CRF
+crf_opt.fore_thr = 0.65;
+crf_opt.fore_area_thr = 0.5;
+crf_opt.fea_theta = [1e-2];
+crf_opt.position_theta = [5e-3];
+crf_opt.smooth_theta = [1e-4];
+assert(opts.num_scale == length(crf_opt.fea_theta) && opts.num_scale == length(crf_opt.position_theta)...
+    &&opts.num_scale == length(crf_opt.smooth_theta))
+%% 
+
+for dir_id = 1:length(sub_dir)
+    if strcmp(sub_dir(dir_id).name, '.') || strcmp(sub_dir(dir_id).name, '..')
+        continue;
+    end
+    fprintf('Processing Directory: %d / %d \n', dir_id, length(sub_dir));
+    cur_image_path = [image_path sub_dir(dir_id).name '/'];
+    cur_map_path = [map_path sub_dir(dir_id).name '/'];
+    if ~isdir(cur_map_path)
+        mkdir(cur_map_path);
+    end
+    imgs = dir([cur_image_path '*JPEG']);
+    for im_id = 357:length(imgs)
+        if mod(im_id, 100) == 0
+            fprintf('img: %d/%d \n', im_id, length(imgs));
+        end
+        im = imread([cur_image_path imgs(im_id).name]);
+        [height, width, ch] = size(im);
+        if ch ~= 3
+            im = repmat(im, [1,1,3]);
+        end
+        %% forward pass
+        gen_map = network_forward(net, im, crf_opt.fore_thr);
+        
+        %% Compute Background cues
+        %     background_cue = BG(im, bgd_opt.reg, bgd_opt.margin_ratio);
+        %     background_cue = (background_cue - min(background_cue(:))) / (max(background_cue(:)) - min(background_cue(:)));
+        %     figure(1);subplot(1,2,1);imshow(background_cue)
+        %     continue
+        
+        %% Oversegemntation
+        [superpixels, sp_num, affinity, feature] = OverSegment(im, model, opts);
+        %% Compute superpixel init label and features (r,g,b,l,a,b,x,y)
+        sp_info = ComputeSPixelFeature(superpixels, sp_num, gen_map, feature, [height, width], crf_opt.fore_area_thr);
+        [edge_appearance, edge_smooth, edge_affinity] = ComputeEdgeWeight(sp_info, affinity, crf_opt);
+        edge_appearance(1:size(edge_affinity, 1)+1:end) = 0;
+        edge_smooth(1:size(edge_affinity, 1)+1:end) = 0;
+        edge_affinity(1:size(edge_affinity, 1)+1:end) = 0;
+        boundary = DetectBoundarySP(superpixels, sp_num);
+        %% Init CRF
+        sp_feature = cell2mat(sp_info.fea');
+        sp_position = cell2mat(sp_info.position');
+        sp_init_label = cell2mat(sp_info.init_label');
+        
+        %     background_cue_sp = cell2mat(sp_info.background_cue');
+        
+        if sum(sp_init_label) <= 5
+            res = uint8(gen_map);
+            imwrite(res, [cur_map_path imgs(im_id).name]);
+            continue;
+        end
+        crf = CRF(255*[sp_feature; sp_position],sp_init_label, ...
+            {edge_affinity, edge_appearance, edge_smooth}, [.1, 1, 0.5],...
+            'boundary', boundary, 'sp_num', sp_num);
+        %% Show GMM labeling
+        %         visualization(im, gen_map, superpixels, crf, opts.scale_weight, sp_num, visualize);
+        %% CRF iteration
+        
+        try
+            for iteration = 1:5
+                crf.NextIter();
+                %             visualization(im, gen_map, superpixels, crf, opts.scale_weight, sp_num, visualize);
+            end
+        catch
+            %         assert(0)
+            crf = CRF(255*[sp_feature; sp_position],sp_init_label, ...
+                {edge_affinity, edge_appearance, edge_smooth}, [.1, 1, 0.5],...
+                'boundary', boundary, 'prior_weight', 0, 'sp_num', sp_num);
+            %         crf.NextIter();
+        end
+        %% visualization and save results
+        %     visualization(im, gen_map, superpixels, crf, opts.scale_weight, sp_num, visualize);
+        res = GenerateMap(im, superpixels, crf, opts.scale_weight, sp_num);
+        res = uint8(res);
+        imwrite(res, [cur_map_path imgs(im_id).name])
+    end
+end
