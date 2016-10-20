@@ -51,8 +51,8 @@ crf_opt.smooth_theta = [1e-4];
 assert(opts.num_scale == length(crf_opt.fea_theta) && opts.num_scale == length(crf_opt.position_theta)...
     &&opts.num_scale == length(crf_opt.smooth_theta))
 %% 
-
-for dir_id = 1:length(sub_dir)
+dir_set = [] %1-100 
+for dir_id = 200:-1:122
     if strcmp(sub_dir(dir_id).name, '.') || strcmp(sub_dir(dir_id).name, '..')
         continue;
     end
@@ -63,11 +63,17 @@ for dir_id = 1:length(sub_dir)
         mkdir(cur_map_path);
     end
     imgs = dir([cur_image_path '*JPEG']);
-    for im_id = 357:length(imgs)
+    for im_id = 1:length(imgs) % dir_id = 3 (fileid = 1), im_id = 8000:lengh(imgs), max_side<500
         if mod(im_id, 100) == 0
             fprintf('img: %d/%d \n', im_id, length(imgs));
         end
         im = imread([cur_image_path imgs(im_id).name]);
+        [ori_height, ori_width, ~] = size(im);
+        max_side = max(ori_height, ori_width);
+        if max_side > 500
+            im = imresize(im, 500/max_side);    
+        end
+        
         [height, width, ch] = size(im);
         if ch ~= 3
             im = repmat(im, [1,1,3]);
@@ -98,13 +104,25 @@ for dir_id = 1:length(sub_dir)
         %     background_cue_sp = cell2mat(sp_info.background_cue');
         
         if sum(sp_init_label) <= 5
-            res = uint8(gen_map);
+            if max_side > 500
+              gen_map = imresize(gen_map, [ori_height, ori_width]);
+            end
+            res = uint8(gen_map>0.5);
             imwrite(res, [cur_map_path imgs(im_id).name]);
             continue;
         end
+        try
         crf = CRF(255*[sp_feature; sp_position],sp_init_label, ...
             {edge_affinity, edge_appearance, edge_smooth}, [.1, 1, 0.5],...
             'boundary', boundary, 'sp_num', sp_num);
+        catch
+            if max_side > 500
+              gen_map = imresize(gen_map, [ori_height, ori_width]);
+            end
+            res = uint8(gen_map>0.5);
+            imwrite(res, [cur_map_path imgs(im_id).name]);
+            continue;
+        end
         %% Show GMM labeling
         %         visualization(im, gen_map, superpixels, crf, opts.scale_weight, sp_num, visualize);
         %% CRF iteration
@@ -124,7 +142,10 @@ for dir_id = 1:length(sub_dir)
         %% visualization and save results
         %     visualization(im, gen_map, superpixels, crf, opts.scale_weight, sp_num, visualize);
         res = GenerateMap(im, superpixels, crf, opts.scale_weight, sp_num);
-        res = uint8(res);
+        if max_side > 500
+            res = imresize(res, [ori_height, ori_width]);
+        end
+        res = uint8(res>0.5);
         imwrite(res, [cur_map_path imgs(im_id).name])
     end
 end
