@@ -3,7 +3,7 @@ clc
 rng(0);
 imagenet_root = '/home/lijun/Research/DataSet/ILSVRC2014/ILSVRC2014_DET/';
 image_path = [imagenet_root 'image/ILSVRC2014_DET_train/'];
-map_path = [imagenet_root 'sal_map/ILSVRC2014_DET_train/'];
+map_path = [imagenet_root 'sal_map_png/ILSVRC2014_DET_train/'];
 if ~isdir(map_path)
     mkdir(map_path)
 end
@@ -51,8 +51,7 @@ crf_opt.smooth_theta = [1e-4];
 assert(opts.num_scale == length(crf_opt.fea_theta) && opts.num_scale == length(crf_opt.position_theta)...
     &&opts.num_scale == length(crf_opt.smooth_theta))
 %% 
-dir_set = [] %1-100 
-for dir_id = 200:-1:122
+for dir_id = 1:100
     if strcmp(sub_dir(dir_id).name, '.') || strcmp(sub_dir(dir_id).name, '..')
         continue;
     end
@@ -67,7 +66,11 @@ for dir_id = 200:-1:122
         if mod(im_id, 100) == 0
             fprintf('img: %d/%d \n', im_id, length(imgs));
         end
+        try
         im = imread([cur_image_path imgs(im_id).name]);
+        catch
+            continue;
+        end
         [ori_height, ori_width, ~] = size(im);
         max_side = max(ori_height, ori_width);
         if max_side > 500
@@ -146,6 +149,6 @@ for dir_id = 200:-1:122
             res = imresize(res, [ori_height, ori_width]);
         end
         res = uint8(res>0.5);
-        imwrite(res, [cur_map_path imgs(im_id).name])
+        imwrite(res, [cur_map_path imgs(im_id).name(1:end-4) 'png']);
     end
 end
