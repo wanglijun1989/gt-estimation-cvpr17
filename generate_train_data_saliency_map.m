@@ -3,7 +3,7 @@ clc
 rng(0);
 imagenet_root = '/home/lijun/Research/DataSet/ILSVRC2014/ILSVRC2014_DET/';
 image_path = [imagenet_root 'image/ILSVRC2014_DET_train/'];
-map_path = [imagenet_root 'sal_map_png/ILSVRC2014_DET_train/'];
+map_path = [imagenet_root 'sal_map_2_png/ILSVRC2014_DET_train/'];
 if ~isdir(map_path)
     mkdir(map_path)
 end
@@ -16,13 +16,13 @@ gpu_id = 1;
 caffe.set_mode_gpu();
 caffe.set_device(gpu_id);
 %% specify machine id and model version
-machine_id = 'local';
-major_model_version = num2str(1);
-minor_model_version = '';
+machine_id = 'cvpr17-sal-finetune';
+major_model_version = num2str(2);
+minor_model_version = '-0';
 specify_machine;
-iter_num = '5000';
+iter_num = '50000';
 %% init network
-model_weights = [caffe_root 'models/' machine_path '/ip-' major_model_version minor_model_version '_iter_' iter_num '.caffemodel'];
+model_weights = [caffe_root 'models/' machine_path '/sal-finetune-' major_model_version minor_model_version '_iter_' iter_num '.caffemodel'];
 model_def = [caffe_root 'models/' machine_path '/deploy-' major_model_version '.prototxt'];
 phase = 'test';
 net = caffe.Net(model_def, model_weights, phase);
@@ -43,7 +43,7 @@ opts.num_scale = 1;
 opts.scale_weight = [1];
 assert(opts.num_scale == length(opts.k) && opts.num_scale == length(opts.scale_weight));
 %% set up opts for CRF
-crf_opt.fore_thr = 0.65;
+crf_opt.fore_thr = 0.4;
 crf_opt.fore_area_thr = 0.5;
 crf_opt.fea_theta = [1e-2];
 crf_opt.position_theta = [5e-3];
@@ -51,7 +51,7 @@ crf_opt.smooth_theta = [1e-4];
 assert(opts.num_scale == length(crf_opt.fea_theta) && opts.num_scale == length(crf_opt.position_theta)...
     &&opts.num_scale == length(crf_opt.smooth_theta))
 %% 
-for dir_id = 1:100
+for dir_id = length(sub_dir) : -1 :455
     if strcmp(sub_dir(dir_id).name, '.') || strcmp(sub_dir(dir_id).name, '..')
         continue;
     end
@@ -62,7 +62,12 @@ for dir_id = 1:100
         mkdir(cur_map_path);
     end
     imgs = dir([cur_image_path '*JPEG']);
-    for im_id = 1:length(imgs) % dir_id = 3 (fileid = 1), im_id = 8000:lengh(imgs), max_side<500
+    if dir_id == 18
+        start_im_id = 300;
+    else 
+        start_im_id = 1;
+    end
+    for im_id = start_im_id:length(imgs) % dir_id = 3 (fileid = 1), im_id = 8000:lengh(imgs), max_side<500
         if mod(im_id, 100) == 0
             fprintf('img: %d/%d \n', im_id, length(imgs));
         end
@@ -152,3 +157,5 @@ for dir_id = 1:100
         imwrite(res, [cur_map_path imgs(im_id).name(1:end-4) 'png']);
     end
 end
+caffe.reset_all;
+
