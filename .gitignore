@@ -11,4 +11,5 @@ img
 *.mat
 *.solverstate
 *.txt
+sal_res
 external
